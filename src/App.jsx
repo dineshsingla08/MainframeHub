@@ -14,6 +14,9 @@ import { SQLPracticeLab } from './components/SQLPracticeLab';
 import { ResourceLibrary } from './components/ResourceLibrary';
 import { ProgressAnalytics } from './components/ProgressAnalytics';
 import { AbendSolver } from './components/AbendSolver';
+import { Scenarios } from './components/Scenarios';
+import { Forum } from './components/Forum';
+import { AuthModal } from './components/AuthModal';
 import { Footer } from './components/Footer';
 import { allQuestions as questionsData } from './data/questions';
 import './index.css';
@@ -25,6 +28,16 @@ export default function App() {
         const saved = localStorage.getItem('mf_font_scale');
         return saved ? parseFloat(saved) : 1.0;
     });
+
+    // Auth States
+    const [user, setUser] = useState(() => {
+        const saved = localStorage.getItem('mf_auth_user');
+        return saved ? JSON.parse(saved) : null;
+    });
+    const [token, setToken] = useState(() => {
+        return localStorage.getItem('mf_auth_token') || null;
+    });
+    const [showAuthModal, setShowAuthModal] = useState(false);
     
     // Search and Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -72,17 +85,59 @@ export default function App() {
     // Global Command Palette State
     const [showCommandPalette, setShowCommandPalette] = useState(false);
 
-    // Synchronize LocalStorage
+    // Fetch progress on mount/token change
+    useEffect(() => {
+        if (token) {
+            fetchProgress(token);
+        }
+    }, [token]);
+
+    const fetchProgress = async (authToken) => {
+        try {
+            const res = await fetch('http://localhost:5000/api/progress', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.mastered) setMastered(data.mastered);
+                if (data.needs_review) setNeedsReview(data.needs_review);
+                if (data.starred) setStarred(data.starred);
+            }
+        } catch (err) {
+            console.error('Error fetching progress:', err);
+        }
+    };
+
+    const syncProgress = async (m, nr, s) => {
+        if (!token) return;
+        try {
+            await fetch('http://localhost:5000/api/progress', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ mastered: m, needs_review: nr, starred: s, score: m.length * 10 })
+            });
+        } catch (err) {
+            console.error('Error syncing progress:', err);
+        }
+    };
+
+    // Synchronize LocalStorage & Backend
     useEffect(() => {
         localStorage.setItem('mf_mastered', JSON.stringify(mastered));
+        syncProgress(mastered, needsReview, starred);
     }, [mastered]);
 
     useEffect(() => {
         localStorage.setItem('mf_needs_review', JSON.stringify(needsReview));
+        syncProgress(mastered, needsReview, starred);
     }, [needsReview]);
 
     useEffect(() => {
         localStorage.setItem('mf_starred', JSON.stringify(starred));
+        syncProgress(mastered, needsReview, starred);
     }, [starred]);
 
     // Sync HTML theme class to document body
@@ -163,6 +218,24 @@ export default function App() {
 
     const handleResetAllProgress = () => {
         if (window.confirm("Are you sure you want to reset all your learning statistics? This will clear your Mastered, Needs Review, and Starred logs.")) {
+            setMastered([]);
+            setNeedsReview([]);
+            setStarred([]);
+            syncProgress([], [], []);
+        }
+    };
+
+    const handleLoginSuccess = (loginUser, loginToken) => {
+        setUser(loginUser);
+        setToken(loginToken);
+    };
+
+    const handleLogout = () => {
+        if (window.confirm("Are you sure you want to log out of your session?")) {
+            localStorage.removeItem('mf_auth_token');
+            localStorage.removeItem('mf_auth_user');
+            setUser(null);
+            setToken(null);
             setMastered([]);
             setNeedsReview([]);
             setStarred([]);
@@ -256,9 +329,11 @@ export default function App() {
         interview: 'Mock Interview',
         sandbox: 'Coding Sandbox',
         sqllab: 'SQL Practice Lab',
+        scenarios: 'Incident Scenarios',
         roadmap: 'Career Roadmap',
         resources: 'Resource Library',
         architecture: 'System Diagrams',
+        forum: 'Community Forum',
     };
 
     return (
@@ -268,6 +343,9 @@ export default function App() {
                 activeTab={activeTab} 
                 setActiveTab={handleTabSwitch} 
                 handleResetAllProgress={handleResetAllProgress} 
+                user={user}
+                onLogout={handleLogout}
+                triggerAuthModal={() => setShowAuthModal(true)}
             />
 
             {/* MAIN WORKSPACE */}
@@ -412,6 +490,16 @@ export default function App() {
                 {activeTab === 'architecture' && <ArchitectureDiagrams />}
 
                 {activeTab === 'abendsolver' && <AbendSolver />}
+
+                {activeTab === 'scenarios' && <Scenarios />}
+
+                {activeTab === 'forum' && (
+                    <Forum 
+                        user={user}
+                        token={token}
+                        triggerAuthModal={() => setShowAuthModal(true)}
+                    />
+                )}
                 </div>{/* end workspace-content */}
 
                 {/* FOOTER */}
@@ -425,6 +513,13 @@ export default function App() {
                     starred={starred}
                     toggleStarred={toggleStarred}
                     onClose={() => setShowCommandPalette(false)}
+                />
+            )}
+
+            {showAuthModal && (
+                <AuthModal 
+                    onClose={() => setShowAuthModal(false)}
+                    onLoginSuccess={handleLoginSuccess}
                 />
             )}
         </div>

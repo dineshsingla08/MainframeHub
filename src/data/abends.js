@@ -351,5 +351,222 @@ PERFORM UNTIL END-OF-FILE
     END-IF
 END-PERFORM.
 EXEC SQL COMMIT END-EXEC. * Commit remainder`
+  },
+  {
+    code: "S0C5",
+    title: "Addressing Exception",
+    category: "System",
+    severity: "CRITICAL",
+    description: "An S0C5 abend occurs when the program specifies an effective address that is outside the range of available virtual storage allocations.",
+    causes: [
+      "Invalid index or subscript calculations pointing to an unallocated region of memory.",
+      "Buffer overflow causing the storage pointers of variables to become corrupted.",
+      "Incorrect base register usage (usually in assembler subprograms)."
+    ],
+    fix: "1. Inspect the abend dump output for index boundary checks.\n2. Enable the SSRANGE compiler option during testing to locate addressing boundary overflows.\n3. Initialize base pointers before attempting storage updates.",
+    proTip: "Testing with SSRANGE intercepts subscript address out-of-bounds at runtime and raises a clear warning instead of crashing with an S0C5 dump.",
+    snippet: `* -- THE PROBLEM (SSRANGE catches this) --
+01  TABLE-DATA.
+    05  ARRAY-VAL  PIC X(10) OCCURS 5 TIMES.
+...
+MOVE "A" TO ARRAY-VAL(9) * <-- Address exception S0C5 (9 exceeds 5)`
+  },
+  {
+    code: "S0C9",
+    title: "Divide by Zero Exception",
+    category: "System",
+    severity: "HIGH",
+    description: "An S0C9 abend occurs when an arithmetic statement attempts to divide a number by zero using binary integer division rules.",
+    causes: [
+      "Input variables representing the divisor hold zero due to missing input validation.",
+      "Accumulator registers were not cleared prior to loop execution."
+    ],
+    fix: "1. Add defensive IF checks before executing division: e.g., IF WS-DIVISOR IS NOT EQUAL TO ZERO.\n2. Ensure variables are initialized correctly.",
+    proTip: "Always validate variables that serve as dividers in calculation engines before triggering division instructions.",
+    snippet: `* -- THE SOLUTION (Defensive Check) --
+IF WS-DIVISOR NOT = ZERO
+    DIVIDE WS-TOTAL BY WS-DIVISOR GIVING WS-AVG
+ELSE
+    MOVE ZERO TO WS-AVG
+END-IF`
+  },
+  {
+    code: "SQLCODE -104",
+    title: "Syntax Error in SQL Statement",
+    category: "DB2",
+    severity: "HIGH",
+    description: "An SQLCODE -104 indicates that a database query could not be executed because it contains a grammar or syntax error.",
+    causes: [
+      "Misspelled SQL reserved keyword (e.g. SELECT, FROM, WHERE).",
+      "Missing commas between selected column targets, or unbalanced parenthesis.",
+      "Invalid host variable binding syntax (missing colon prefix)."
+    ],
+    fix: "1. Check the SQL statement details around the token printed in the SQLERRMC.\n2. Ensure all host variables are prefixed with a colon (:WS-VAR).",
+    proTip: "Utilize static code linting utilities or bind/precompile checks to validate SQL syntax prior to deployment.",
+    snippet: `* -- THE PROBLEM (Missing Colon) --
+EXEC SQL SELECT NAME INTO WS-NAME FROM EMP END-EXEC. * <-- Error!
+
+* -- THE SOLUTION (Correct syntax) --
+EXEC SQL SELECT NAME INTO :WS-NAME FROM EMP END-EXEC.`
+  },
+  {
+    code: "SQLCODE -204",
+    title: "Table or Object Not Defined",
+    category: "DB2",
+    severity: "HIGH",
+    description: "An SQLCODE -204 indicates that the targeted table, view, or schema object name does not exist in the DB2 system catalog.",
+    causes: [
+      "Misspelled database object name.",
+      "Connecting to the wrong database schema environment (e.g., pointing to DEV instead of PROD schema).",
+      "Object was dropped by a database administrator."
+    ],
+    fix: "1. Verify table names match the DB2 catalog.\n2. Check DB2 schema prefix parameters (e.g. SELECT * FROM SCHEMA.TABLE).\n3. Re-run BIND steps specifying the correct Qualifier schema.",
+    proTip: "Use QUALIFIER parameter in JCL BIND cards to direct packages to the correct database schema without hardcoding prefix names in application code.",
+    snippet: `//-- JCL BIND WITH QUALIFIER --
+//BIND    EXEC PGM=IKJEFT01
+//SYSTSIN  DD *
+ DSN SYSTEM(DB2D)
+ BIND PACKAGE(COLL) MEMBER(PROG) QUALIFIER(DEVSCHEMA)`
+  },
+  {
+    code: "SQLCODE -206",
+    title: "Column Not Found in Table",
+    category: "DB2",
+    severity: "HIGH",
+    description: "An SQLCODE -206 indicates that a column name referenced in a SELECT, INSERT, UPDATE, or WHERE clause does not exist in the targeted table definition.",
+    causes: [
+      "Column name misspelling in the query text.",
+      "Mismatch between the table schema version and the static DCLGEN mapping structure used in the COBOL code."
+    ],
+    fix: "1. Regenerate DCLGEN declarations using DB2 utility panels.\n2. Cross-reference columns with DB2 system catalog tables (SYSIBM.SYSCOLUMNS).",
+    proTip: "Always update DCLGEN structures in your copybooks whenever database columns are modified to ensure code variables match DB2 column catalogs.",
+    snippet: `* -- COPYBOOK DCLGEN MAPPING EXAMPLE --
+EXEC SQL DECLARE EMPLOYEE TABLE
+( EMP_ID           INTEGER NOT NULL,
+  EMP_NAME         CHAR(30) NOT NULL
+) END-EXEC.`
+  },
+  {
+    code: "SQLCODE -501",
+    title: "Cursor Not Open",
+    category: "DB2",
+    severity: "HIGH",
+    description: "An SQLCODE -501 indicates that a FETCH or CLOSE statement was executed against a DB2 cursor that is not currently open.",
+    causes: [
+      "Executing a FETCH statement before calling EXEC SQL OPEN cursor-name END-EXEC.",
+      "Cursor closed automatically due to a prior COMMIT statement (when not declared WITH HOLD).",
+      "Calling program logic skipped the OPEN paragraph due to condition branch changes."
+    ],
+    fix: "1. Inspect execution flow to ensure OPEN cursor executes before FETCH.\n2. Add WITH HOLD parameter to the cursor declaration if commits are processed within the fetch loop.",
+    proTip: "Always specify DECLARE CURSOR ... WITH HOLD if you intend to execute database commits while looping through fetched cursor rows.",
+    snippet: `* -- THE SOLUTION (Cursor WITH HOLD) --
+EXEC SQL
+    DECLARE C1 CURSOR WITH HOLD FOR
+    SELECT EMP_ID FROM EMPLOYEE
+END-EXEC.
+...
+EXEC SQL OPEN C1 END-EXEC.
+PERFORM UNTIL SQLCODE = 100
+    EXEC SQL FETCH C1 INTO :WS-ID END-EXEC
+    * Commit here will not close the cursor:
+    EXEC SQL COMMIT END-EXEC
+END-PERFORM.
+EXEC SQL CLOSE C1 END-EXEC.`
+  },
+  {
+    code: "SQLCODE -803",
+    title: "Duplicate Key Violation",
+    category: "DB2",
+    severity: "HIGH",
+    description: "An SQLCODE -803 indicates that an INSERT or UPDATE statement failed because it attempted to create a row with a key that already exists in a unique index.",
+    causes: [
+      "Application logic failed to check for existing records before inserting new rows.",
+      "Duplicate record present in input batch file.",
+      "Sequence generator or key allocation index became out of sync."
+    ],
+    fix: "1. Check the duplicate key values in SQLERRMC.\n2. Add pre-existence verification checks: e.g., SELECT COUNT(*) to verify if key exists before running INSERT.\n3. Wrap insert operations in exception handlers and update SQLCODE error logic.",
+    proTip: "In transaction engines, use MERGE statements (or check-before-insert) to handle duplicate write conflicts cleanly without throwing fatal database exceptions.",
+    snippet: `* -- THE SOLUTION (Check SQLCODE -803) --
+EXEC SQL
+    INSERT INTO EMPLOYEE (EMP_ID, EMP_NAME) VALUES (:WS-ID, :WS-NAME)
+END-EXEC.
+IF SQLCODE = -803
+    DISPLAY "RECORD ALREADY EXISTS, SWITCHING TO UPDATE..."
+    PERFORM UPDATE-RECORD-PARA
+END-IF`
+  },
+  {
+    code: "S222",
+    title: "Job Cancelled by Operator",
+    category: "System",
+    severity: "HIGH",
+    description: "An S222 abend indicates that the running job was cancelled by a system operator or automated scheduling system without requesting a memory dump.",
+    causes: [
+      "Job was hanging or stuck in lock contention.",
+      "Operator cancelled the job manually to free up resources.",
+      "The job entered an infinite loop or exceeded CPU resource allocation thresholds."
+    ],
+    fix: "1. Check the operator log messages to see the reason for cancellation.\n2. Check for deadlock warnings or infinite loops in execution code.\n3. Re-run during low-activity schedules if resource contention was the primary cause.",
+    proTip: "Add status logging outputs to batch loops so operators can see job progress. If progress stops, they can isolate lock conditions before cancelling.",
+    snippet: `* -- JCL LOG MESSAGE --
+$HASP395 BATCHJOB2 CANCELLED BY OPERATOR`
+  },
+  {
+    code: "S913",
+    title: "RACF Security Access Violation",
+    category: "System",
+    severity: "HIGH",
+    description: "An S913 abend occurs when a job step attempts to open a dataset or access a system resource for which it does not have RACF (Resource Access Control Facility) authorization.",
+    causes: [
+      "The user executing the JCL does not have read/write permissions for the dataset defined in JCL DD statements.",
+      "The job attempts to access tape volumes or system catalog resources without security credentials."
+    ],
+    fix: "1. Check the console message: e.g., ICH408I USER(userid) GROUP(group) CL(DATASET) INSUFFICIENT ACCESS AUTHORITY.\n2. Contact security administrators to grant access to the resource (e.g. using PERMIT command).",
+    proTip: "Use RACF groups to manage permissions for batch job steps instead of assigning permissions to individual developer IDs, ensuring consistent access across project teams.",
+    snippet: `* -- RACF COMMANDS --
+* Check dataset permissions:
+LISTDSD DATASET('PROD.CUSTOMER.DATA')
+* Grant READ access:
+PERMIT 'PROD.CUSTOMER.DATA' CLASS(DATASET) ID(DEVGRP) ACCESS(READ)`
+  },
+  {
+    code: "U4038",
+    title: "Language Environment (LE) Runtime Error",
+    category: "System",
+    severity: "HIGH",
+    description: "A U4038 user abend is a generic runtime wrapper exception issued by IBM Language Environment (LE) indicating that a fatal execution error occurred inside a high-level language program (COBOL/PL/I).",
+    causes: [
+      "An unhandled severity 2 or higher LE error (such as mathematical library errors, file status mismatches, or internal compiler failures).",
+      "Calling a subprogram with mismatching parameter counts, causing variable corruption in memory."
+    ],
+    fix: "1. Review the CEEDUMP or SYSOUT log outputs to view the original error code wrapped by the U4038 exception.\n2. Locate the specific error condition (such as status key codes or numerical overflows) and handle it programmatically.",
+    proTip: "Ensure that JCL jobs allocate a SYSOUT DD statement for the CEEDUMP log so you can view LE diagnostics details rather than seeing only the generic U4038 code.",
+    snippet: `* -- CEEDUMP DIAGNOSTICS SCREEN --
+CEE3207S The system detected a data exception.
+Location: Program COBPROG at statement 120.`
+  },
+  {
+    code: "LENGERR",
+    title: "CICS COMMAREA Length Error",
+    category: "CICS",
+    severity: "MEDIUM",
+    description: "A LENGERR abend occurs when a program attempts to pass or read data from the CICS COMMAREA (or other containers) using size parameters that exceed actual allocation limits.",
+    causes: [
+      "The program tried to read DFHCOMMAREA fields when EIBCALEN was smaller than the structure format (or equal to 0).",
+      "Mismatched data structure lengths between the calling CICS program and the called CICS program."
+    ],
+    fix: "1. Add length validation checks inside the PROCEDURE DIVISION before referencing linkage variables.\n2. Verify that copybook layouts are identical across calling and receiving programs.",
+    proTip: "Always check EIBCALEN values before accessing COMMAREA fields. If EIBCALEN is 0, initialize default empty layouts instead of attempting direct variable moves.",
+    snippet: `* -- THE SOLUTION (Defensive Length Check) --
+PROCEDURE DIVISION.
+    IF EIBCALEN = ZERO
+        PERFORM INITIALIZE-NEW-SCREEN-PARA
+    ELSE
+        IF EIBCALEN < LENGTH OF DFHCOMMAREA
+            PERFORM LENGERR-HANDLER-PARA
+        ELSE
+            MOVE DFHCOMMAREA TO WS-LOCAL-DATA
+        END-IF
+    END-IF.`
   }
 ];

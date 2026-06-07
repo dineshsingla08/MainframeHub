@@ -25,6 +25,7 @@ const NAV_GROUPS = [
       { id: 'interview', icon: 'mic', label: 'Mock Interview' },
       { id: 'sandbox', icon: 'terminal', label: 'Coding Sandbox' },
       { id: 'sqllab', icon: 'sql', label: 'SQL Practice Lab' },
+      { id: 'scenarios', icon: 'scenarios', label: 'Incident Scenarios' },
     ]
   },
   {
@@ -33,11 +34,12 @@ const NAV_GROUPS = [
       { id: 'roadmap', icon: 'roadmap', label: 'Career Roadmap' },
       { id: 'resources', icon: 'resources', label: 'Resource Library' },
       { id: 'architecture', icon: 'architecture', label: 'System Diagrams' },
+      { id: 'forum', icon: 'chat', label: 'Community Forum' },
     ]
   }
 ];
 
-export const Sidebar = ({ activeTab, setActiveTab, handleResetAllProgress }) => {
+export const Sidebar = ({ activeTab, setActiveTab, handleResetAllProgress, user, onLogout, triggerAuthModal }) => {
   const [collapsed, setCollapsed] = useState({});
 
   const toggleGroup = (label) => {
@@ -95,6 +97,52 @@ export const Sidebar = ({ activeTab, setActiveTab, handleResetAllProgress }) => 
       </div>
 
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem', padding: '0 0 0.5rem 0' }}>
+        {user ? (
+          <div className="user-profile-section" style={{
+            border: '1px solid var(--accent-color)',
+            background: 'rgba(0,255,65,0.04)',
+            padding: '0.6rem 0.8rem',
+            borderRadius: '6px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.3rem'
+          }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>INCIDENT SOLVER:</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>@{user.username}</div>
+            <button 
+              onClick={onLogout}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#ff4444',
+                textAlign: 'left',
+                padding: 0,
+                cursor: 'pointer',
+                fontSize: '0.65rem',
+                textDecoration: 'underline',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: '700'
+              }}
+            >
+              DISCONNECT
+            </button>
+          </div>
+        ) : (
+          <button 
+            className="action-btn" 
+            onClick={triggerAuthModal} 
+            style={{ 
+              justifyContent: 'center', 
+              width: '100%', 
+              background: 'rgba(var(--accent-rgb), 0.1)', 
+              borderColor: 'var(--accent-color)', 
+              color: 'var(--accent-color)',
+              fontWeight: '800'
+            }}
+          >
+            🔑 LOGIN / REGISTER
+          </button>
+        )}
         <div className="system-status">
           <span className="status-dot"></span>
           <span>SYS.ONLINE: 2026</span>
@@ -191,6 +239,16 @@ const NavIcon = ({ name }) => {
         <rect x="9" y="16" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="2" fill="none"/>
         <line x1="8" y1="5" x2="16" y2="5" stroke="currentColor" strokeWidth="2"/>
         <line x1="12" y1="5" x2="12" y2="16" stroke="currentColor" strokeWidth="2"/>
+      </svg>
+    ),
+    scenarios: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none"/>
+      </svg>
+    ),
+    chat: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" fill="none"/>
       </svg>
     ),
     reset: (
