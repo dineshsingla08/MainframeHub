@@ -15,6 +15,7 @@ const NAV_GROUPS = [
       { id: 'explorer', icon: 'explorer', label: 'Study Explorer' },
       { id: 'flashcards', icon: 'flashcard', label: 'Flashcards' },
       { id: 'tutorials', icon: 'book', label: 'Tutorials Hub' },
+      { id: 'abendsolver', icon: 'shield', label: 'Abend Solver' },
     ]
   },
   {
@@ -131,6 +132,11 @@ const NavIcon = ({ name }) => {
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
         <rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" fill="none"/>
         <line x1="12" y1="4" x2="12" y2="18" stroke="currentColor" strokeWidth="2"/>
+      </svg>
+    ),
+    shield: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
     book: (

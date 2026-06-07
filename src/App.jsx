@@ -13,6 +13,7 @@ import { MockInterview } from './components/MockInterview';
 import { SQLPracticeLab } from './components/SQLPracticeLab';
 import { ResourceLibrary } from './components/ResourceLibrary';
 import { ProgressAnalytics } from './components/ProgressAnalytics';
+import { AbendSolver } from './components/AbendSolver';
 import { Footer } from './components/Footer';
 import { allQuestions as questionsData } from './data/questions';
 import './index.css';
@@ -250,6 +251,7 @@ export default function App() {
         explorer: 'Study Explorer',
         flashcards: 'Flashcards',
         tutorials: 'Tutorials Hub',
+        abendsolver: 'Abend Solver',
         quiz: 'Exam Center',
         interview: 'Mock Interview',
         sandbox: 'Coding Sandbox',
@@ -408,6 +410,8 @@ export default function App() {
                 {activeTab === 'resources' && <ResourceLibrary />}
 
                 {activeTab === 'architecture' && <ArchitectureDiagrams />}
+
+                {activeTab === 'abendsolver' && <AbendSolver />}
                 </div>{/* end workspace-content */}
 
                 {/* FOOTER */}
