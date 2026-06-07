@@ -208,6 +208,7 @@ body {
     color: var(--text-light);
     background: rgba(255, 255, 255, 0.03);
     border-color: rgba(255, 255, 255, 0.05);
+    transform: translateX(4px);
 }
 
 .nav-item.active {
@@ -226,9 +227,21 @@ body {
     min-height: 0;          /* Required for flex children to shrink correctly */
 }
 
+@keyframes tab-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .workspace-content {
     flex: 1 0 auto;         /* Grow to fill, but don't shrink below content size */
     padding: 2rem;
+    animation: tab-fade-in 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 @media (max-width: 1024px) {
@@ -681,6 +694,11 @@ body {
 .action-btn:hover {
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-light);
+    transform: scale(1.03);
+}
+
+.action-btn:active {
+    transform: scale(0.98);
 }
 
 .action-btn.mastered-active {
@@ -1868,4 +1886,15 @@ html {
     color: var(--text-secondary);
     letter-spacing: 0.5px;
     background: rgba(255,255,255,0.02);
+}
+
+/* Custom premium hover lift transitions and glowing shadow for panel and metrics */
+.card-panel, .metric-card {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-panel:hover, .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(var(--accent-rgb), 0.15);
+    border-color: var(--accent-color) !important;
 }

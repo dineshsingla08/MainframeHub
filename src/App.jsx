@@ -24,10 +24,6 @@ import './index.css';
 export default function App() {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [theme, setTheme] = useState('green');
-    const [fontScale, setFontScale] = useState(() => {
-        const saved = localStorage.getItem('mf_font_scale');
-        return saved ? parseFloat(saved) : 1.0;
-    });
 
     // Auth States
     const [user, setUser] = useState(() => {
@@ -146,11 +142,7 @@ export default function App() {
         document.body.classList.add(`theme-${theme}`);
     }, [theme]);
 
-    // Sync font scale to document element
-    useEffect(() => {
-        localStorage.setItem('mf_font_scale', fontScale);
-        document.documentElement.style.setProperty('--font-scale', fontScale);
-    }, [fontScale]);
+
 
     // Initialize Flashcard Deck
     useEffect(() => {
@@ -343,15 +335,12 @@ export default function App() {
                 activeTab={activeTab} 
                 setActiveTab={handleTabSwitch} 
                 handleResetAllProgress={handleResetAllProgress} 
-                user={user}
-                onLogout={handleLogout}
-                triggerAuthModal={() => setShowAuthModal(true)}
             />
 
             {/* MAIN WORKSPACE */}
             <div className="workspace">
                 {/* TOP BAR CONTROLS */}
-                <div className="workspace-content">
+                <div className="workspace-content" key={activeTab}>
                 <div className="top-bar">
                     <h2 style={{ fontSize: '1.4rem', fontWeight: '800', fontFamily: 'var(--font-mono)' }}>
                         &gt;_ {TAB_LABELS[activeTab] || activeTab.toUpperCase()}
@@ -365,21 +354,63 @@ export default function App() {
                         >
                             ⌨️ SEARCH (CTRL+K)
                         </button>
-
-                        {/* ACCESSIBILITY ZOOM SELECTOR */}
-                        <div className="theme-selector" style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', paddingLeft: '0.4rem', paddingRight: '0.4rem', textTransform: 'uppercase' }}>SIZE:</span>
-                            <button className={`font-scale-btn ${fontScale === 1.0 ? 'active' : ''}`} onClick={() => setFontScale(1.0)}>A-</button>
-                            <button className={`font-scale-btn ${fontScale === 1.1 ? 'active' : ''}`} onClick={() => setFontScale(1.1)}>A</button>
-                            <button className={`font-scale-btn ${fontScale === 1.2 ? 'active' : ''}`} onClick={() => setFontScale(1.2)}>A+</button>
-                            <button className={`font-scale-btn ${fontScale === 1.35 ? 'active' : ''}`} onClick={() => setFontScale(1.35)}>A++</button>
-                        </div>
                         
                         <div className="theme-selector">
                             <button className={`theme-btn theme-btn-green ${theme === 'green' ? 'active' : ''}`} onClick={() => setTheme('green')}>IBM GREEN</button>
                             <button className={`theme-btn theme-btn-amber ${theme === 'amber' ? 'active' : ''}`} onClick={() => setTheme('amber')}>AMBER</button>
                             <button className={`theme-btn theme-btn-cyber ${theme === 'cyber' ? 'active' : ''}`} onClick={() => setTheme('cyber')}>COBALT</button>
                         </div>
+
+                        {/* AUTHENTICATION SHIFTED TO TOP RIGHT */}
+                        {user ? (
+                            <div className="topbar-user" style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                border: '1px solid var(--accent-color)',
+                                background: 'rgba(var(--accent-rgb), 0.05)',
+                                padding: '0.35rem 0.75rem',
+                                borderRadius: '6px',
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: '0.75rem'
+                            }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>USER:</span>
+                                <span style={{ fontWeight: '800', color: 'var(--accent-color)' }}>@{user.username}</span>
+                                <button 
+                                    onClick={handleLogout}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#ff4444',
+                                        cursor: 'pointer',
+                                        fontSize: '0.7rem',
+                                        textDecoration: 'underline',
+                                        fontFamily: 'var(--font-mono)',
+                                        fontWeight: '700',
+                                        padding: '0 0 0 0.4rem'
+                                    }}
+                                >
+                                    DISCONNECT
+                                </button>
+                            </div>
+                        ) : (
+                            <button 
+                                className="action-btn" 
+                                onClick={() => setShowAuthModal(true)} 
+                                style={{ 
+                                    padding: '0.4rem 0.8rem', 
+                                    fontSize: '0.72rem', 
+                                    fontFamily: 'var(--font-mono)', 
+                                    letterSpacing: '0.5px',
+                                    background: 'rgba(var(--accent-rgb), 0.1)', 
+                                    borderColor: 'var(--accent-color)', 
+                                    color: 'var(--accent-color)',
+                                    fontWeight: '800'
+                                }}
+                            >
+                                🔑 LOGIN / REGISTER
+                            </button>
+                        )}
                     </div>
                 </div>
 

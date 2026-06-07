@@ -786,10 +786,307 @@ do i = 1 to out.0
 end`
       }
     ]
+  },
+  zOS: {
+    icon: '🏢',
+    color: '#00ff66',
+    description: 'z/OS operating system fundamentals — addressing, storage structures, and dataset catalogs.',
+    chapters: [
+      {
+        title: 'Virtual Storage & Address Spaces',
+        level: 'Beginner',
+        content: `z/OS is a virtual-storage operating system that allocates up to 16 Exabytes of virtual address space (64-bit addressing).
+Each active job, subsystem (CICS, DB2), or terminal user runs within its own private address space.
+Address space divisions:
+1. **Common Area** — Shared by all address spaces (contains nucleuses, systems functions).
+2. **Private Area** — Dedicated user program code and working storage execution.
+3. **Above and Below the Bar** — Address bounds distinguishing 24-bit (16MB), 31-bit (2GB), and 64-bit (16EB) execution regions.`,
+        code: `* z/OS Virtual Address Space Architecture Layout (Concept):
+* 
+* [ 16 EB ]   ===============================================
+*             |                                             |
+*             |           Above the Bar (64-bit)            |
+*             |       Main program objects & buffers        |
+*             |                                             |
+* [  2 GB ]   ================== THE BAR ===================
+*             |                                             |
+*             |           Above the Line (31-bit)           |
+*             |       Extended Private & Common areas       |
+*             |                                             |
+* [ 16 MB ]   ================== THE LINE ==================
+*             |           Below the Line (24-bit)           |
+*             |      Legacy 24-bit programs & buffers       |
+* [   0   ]   ===============================================`
+      },
+      {
+        title: 'Catalog Management & Datasets',
+        level: 'Beginner',
+        content: `z/OS uses a catalog structure to find datasets (files) without needing physical disk unit or volume IDs.
+- **Master Catalog** — Main system catalog containing pointers to user catalogs and system high-level qualifiers (HLQ).
+- **User Catalog** — Stores references to application datasets.
+- **Alias** — Defines which high-level qualifier maps to which user catalog.
+- **PDS vs PDSE** — Partitioned Datasets (libraries) where PDS requires periodic compression (IEBCOPY compress) to reclaim deleted member slots, and PDSE manages directory allocations dynamically.`,
+        code: `//ALLOCATE JOB (MGMT),'ALLOCATE DS',CLASS=A,MSGCLASS=X
+//STEP1    EXEC PGM=IEFBR14
+//* Allocate a cataloged Partitioned Dataset Extended (PDSE)
+//NEWLIB   DD DSN=PROD.APPL.LOADLIB,
+//            DISP=(NEW,CATLG,DELETE),
+//            UNIT=SYSDA,
+//            VOL=SER=PRD101,
+//            SPACE=(CYL,(15,5,10)),
+//            DSNTYPE=LIBRARY,
+//            DCB=(RECFM=U,LRECL=0,BLKSIZE=6144,DSORG=PO)`
+      }
+    ]
+  },
+  RACF: {
+    icon: '🔒',
+    color: '#ff4444',
+    description: 'Resource Access Control Facility — the central security subsystem for z/OS.',
+    chapters: [
+      {
+        title: 'RACF Profiles & Datasets',
+        level: 'Intermediate',
+        content: `RACF protects mainframe resources using two profile types:
+1. **Discrete Profiles** — Protect a single resource (e.g. a specific file).
+2. **Generic Profiles** — Protect multiple files using wildcard patterns (* or **).
+Access Authorities (ascending hierarchy):
+- **NONE** — Prevents any access.
+- **READ** — Read-only access (no modifications).
+- **UPDATE** — Read and write access (modify, append, edit records).
+- **CONTROL** — Read/write access plus control interval modifications (VSAM).
+- **ALTER** — Full control: read, write, delete, and alter the resource security profile.`,
+        code: `/* TSO RACF Commands to protect application datasets */
+
+/* 1. Define a generic profile for payroll datasets */
+ADDSD 'PROD.PAYROLL.**' UACC(NONE) OWNER(SECADMIN)
+
+/* 2. Permit update access to the payroll system group */
+PERMIT 'PROD.PAYROLL.**' ACCESS(UPDATE) ID(PAYGROUP)
+
+/* 3. Refresh the dataset profile definitions in memory */
+SETROPTS GENERIC(DATASET) REFRESH`
+      },
+      {
+        title: 'General Resource Classes',
+        level: 'Advanced',
+        content: `General resources (CICS transactions, MQ queues, console commands, DB2 packages) are secured using resource classes.
+- Classes are defined in the Class Descriptor Table (CDT).
+- Examples: TCICSTRN (CICS transactions), MQQUEUE (MQ Series queues), OPERCMDS (Operator commands).
+- Profiles in generic classes are loaded into memory pools (data spaces) for high-performance authentication.`,
+        code: `/* TSO RACF Commands for General Resources */
+
+/* 1. Protect CICS transaction PAY1 */
+RDEFINE TCICSTRN PAY1 UACC(NONE) AUDIT(ALL)
+
+/* 2. Permit specific user access */
+PERMIT PAY1 CLASS(TCICSTRN) ID(PAYCLERK) ACCESS(READ)
+
+/* 3. Refresh transaction profiles in virtual storage */
+SETROPTS RACLIST(TCICSTRN) REFRESH`
+      }
+    ]
+  },
+  TSO: {
+    icon: '📟',
+    color: '#ffaa00',
+    description: 'Time Sharing Option & Interactive System Productivity Facility — command terminal and panels.',
+    chapters: [
+      {
+        title: 'TSO Commands & Environment',
+        level: 'Beginner',
+        content: `TSO provides command-line interaction on z/OS terminals.
+Common system commands:
+- **ALLOCATE (ALLOC)** — Allocates a dataset to a logical JCL DD name equivalent.
+- **FREE** — Deallocates and releases files or logical DD names.
+- **LISTDS** — Lists file dataset attributes (RECFM, LRECL, blocks).
+- **SEND** — Transmits message notifications to logged-on users.
+- **PROFILE** — Configures prompt alerts, terminal prefix names, and command configurations.`,
+        code: `/* Examples of interactive TSO Commands */
+
+/* Allocate a sequential customer dataset to INDD file handle */
+ALLOCATE FILE(INDD) DATASET('PROD.CUSTOMER.SEQ') SHR
+
+/* Display file dataset allocation properties */
+LISTDS 'PROD.CUSTOMER.SEQ'
+
+/* Release file handle and free allocations */
+FREE FILE(INDD)
+
+/* Notify a developer terminal user */
+SEND 'System backup starting in 5 minutes. Please logoff.' USER(DEV01)`
+      },
+      {
+        title: 'ISPF Panel Interfaces & Dialogs',
+        level: 'Intermediate',
+        content: `ISPF (Interactive System Productivity Facility) provides full-screen menu panel dialogs.
+REXX scripts or programs can interact with ISPF panels using Dialog Services:
+- **ISPEXEC DISPLAY** — Renders an assembler/definition panel layout on screen.
+- **ISPEXEC SELECT** — Runs an ISPF menu option, script, or program.
+- **ISPEXEC VGET / VPUT** — Reads from or writes variable states into shared/profile variable pools.`,
+        code: `/* REXX Script - Display Customer Query Panel Dialog */
+/* REXX */
+address ISPEXEC
+
+/* Display panel named CUSTPNL and capture inputs */
+"DISPLAY PANEL(CUSTPNL)"
+
+if rc = 0 then do
+   /* If user pressed enter, retrieve and display variable */
+   say "Customer lookup initiated for ID: " custid
+   
+   /* Put the variable in the shared profile pool */
+   "VPUT (CUSTID) SHARED"
+   
+   /* Call backend processing program */
+   "SELECT PGM(CBLCUST) PARM("custid")"
+end
+else do
+   say "Lookup operation aborted or user pressed PF3 (EXIT)."
+end`
+      }
+    ]
+  },
+  IMS: {
+    icon: '🧬',
+    color: '#00aaff',
+    description: 'Information Management System — high-performance hierarchical DB and transaction manager.',
+    chapters: [
+      {
+        title: 'DL/I Hierarchical Database',
+        level: 'Advanced',
+        content: `IMS DB uses a hierarchical structure where data is organized into segments (parent/child relationships).
+- **Root Segment** — The top-level segment representing the base entity.
+- **Segment Search Argument (SSA)** — String argument passed in DL/I calls to filter database queries (similar to WHERE clauses in SQL).
+- **PCB (Program Communication Block)** — Defines program access rights and view (subschema) to database segments.
+- **PSB (Program Specification Block)** — Collects all PCBs referenced by a single application program.
+DL/I Calls: GU (Get Unique), GN (Get Next), ISRT (Insert), REPL (Replace), DLET (Delete).`,
+        code: `* COBOL sample code executing hierarchical Get Unique (GU) call
+       WORKING-STORAGE SECTION.
+       01  DL-I-FUNCTIONS.
+           05  DB-GU         PIC X(4)  VALUE 'GU  '.
+       
+       01  CUST-SEGMENT-SSA.
+           05  SSA-NAME      PIC X(8)  VALUE 'CUSTSEG '.
+           05  SSA-BEG-CHAR  PIC X     VALUE '('.
+           05  SSA-KEY-FIELD PIC X(8)  VALUE 'CUSTID  '.
+           05  SSA-OPERATOR  PIC X(2)  VALUE 'EQ'.
+           05  SSA-KEY-VAL   PIC X(6)  VALUE 'C10045'.
+           05  SSA-END-CHAR  PIC X     VALUE ')'.
+
+       PROCEDURE DIVISION.
+           CALL 'CBLTDLI' USING DB-GU
+                                CUST-PCB
+                                CUST-RECORD-AREA
+                                CUST-SEGMENT-SSA.
+           
+           IF PCB-STATUS-CODE NOT = '  '
+               DISPLAY 'IMS ERROR STATUS CODE: ' PCB-STATUS-CODE
+           END-IF.`
+      },
+      {
+        title: 'IMS TM Transaction Processing',
+        level: 'Advanced',
+        content: `IMS Data Communications (DC) or Transaction Manager (TM) handles high-speed transaction requests.
+- **Message Processing Program (MPP)** — Online programs running in Message Processing Regions (MPRs) that process terminal requests.
+- **I/O PCB** — Used by MPPs to pull incoming messages from the system queue and send replies.
+- **Transaction Flow** — MPP retrieves transaction arguments via Get Unique (GU) call on I/O PCB, performs updates, and inserts (ISRT) response messages back to the terminal.`,
+        code: `* COBOL online IMS transaction message processing loop
+       PROCEDURE DIVISION.
+           * Pull transaction message from incoming queue
+           CALL 'CBLTDLI' USING TM-GU
+                                IO-PCB
+                                INPUT-MESSAGE-BUFFER.
+                                
+           PERFORM UNTIL IMS-STATUS-CODE = 'QC'
+               * QC status means transaction message queue is empty
+               PERFORM PROCESS-TRANSACTION-DATA
+               
+               * Send output message back to user terminal
+               CALL 'CBLTDLI' USING TM-ISRT
+                                    IO-PCB
+                                    OUTPUT-MESSAGE-BUFFER
+                                    
+               * Check for next message for this transaction
+               CALL 'CBLTDLI' USING TM-GN
+                                    IO-PCB
+                                    INPUT-MESSAGE-BUFFER
+           END-PERFORM.
+           
+           GOBACK.`
+      }
+    ]
+  },
+  Modernization: {
+    icon: '🚀',
+    color: '#e74c3c',
+    description: 'Mainframe Modernization — hybrid cloud integration, REST APIs, and automated DevOps.',
+    chapters: [
+      {
+        title: 'REST API Enablement (z/OS Connect)',
+        level: 'Advanced',
+        content: `Mainframe modernization involves exposing legacy code (COBOL, CICS, IMS) as standard REST APIs.
+- **z/OS Connect EE** — Exposes mainframe programs using standard REST/JSON request/response models.
+- **API Mapping** — Converts JSON schemas to binary copybook formats (EBCDIC) and maps them to CICS COMMAREA or channel/containers automatically.
+- **Integration** — Allows cloud web apps or microservices to access mainframe systems via secure HTTPS REST APIs.`,
+        code: `{
+  "swagger": "2.0",
+  "info": {
+    "title": "Mainframe Account API",
+    "description": "Exposes CICS Account query program ACCT01 via REST",
+    "version": "1.0.0"
+  },
+  "basePath": "/api/v1",
+  "paths": {
+    "/accounts/{accountId}": {
+      "get": {
+        "operationId": "getAccount",
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON representation of COBOL Account Copybook"
+          }
+        }
+      }
+    }
+  }
+}`
+      },
+      {
+        title: 'Modern DevOps & Build Pipelines',
+        level: 'Advanced',
+        content: `DevOps modernization replaces traditional legacy mainframe library control managers (Endevor, Changeman) with modern Git ecosystems.
+- **Git** — Mainframe source files (COBOL programs, JCL cards) are stored in standard repositories.
+- **IBM Dependency-Based Build (DBB)** — A Java/Groovy API that dynamically resolves source dependencies on z/OS and executes compilations.
+- **CI/CD Pipelines** — Tools like Jenkins or GitLab CI orchestrate automatic source checkouts, compile runs via DBB, unit tests, and binary packaging.`,
+        code: `// Jenkins Pipeline calling DBB compile on z/OS (Simplified)
+node('zOS-agent') {
+   stage('Checkout Code') {
+      checkout scm
+   }
+   stage('Execute Dependency Build') {
+      /* Runs Groovy script using IBM DBB environment on z/OS */
+      sh "groovyz /var/dbb/build.groovy --workspace \${WORKSPACE} --program PAYROLL"
+   }
+   stage('Deploy to Test Region') {
+      /* Copy load modules to targeted test load library */
+      sh "cp \${WORKSPACE}/PAYROLL.load 'SYS1.TEST.LOADLIB(PAYROLL)'"
+      say "Application compiled and deployed to test address space."
+   }
+}`
+      }
+    ]
   }
 };
 
-const CATEGORIES = ['COBOL', 'JCL', 'DB2', 'CICS', 'VSAM', 'REXX'];
+const CATEGORIES = ['COBOL', 'JCL', 'DB2', 'CICS', 'VSAM', 'REXX', 'zOS', 'RACF', 'TSO', 'IMS', 'Modernization'];
 
 const LEVEL_COLORS = {
   'Beginner': '#00ff41',

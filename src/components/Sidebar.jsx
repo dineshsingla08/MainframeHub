@@ -39,7 +39,7 @@ const NAV_GROUPS = [
   }
 ];
 
-export const Sidebar = ({ activeTab, setActiveTab, handleResetAllProgress, user, onLogout, triggerAuthModal }) => {
+export const Sidebar = ({ activeTab, setActiveTab, handleResetAllProgress }) => {
   const [collapsed, setCollapsed] = useState({});
 
   const toggleGroup = (label) => {
@@ -97,52 +97,6 @@ export const Sidebar = ({ activeTab, setActiveTab, handleResetAllProgress, user,
       </div>
 
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem', padding: '0 0 0.5rem 0' }}>
-        {user ? (
-          <div className="user-profile-section" style={{
-            border: '1px solid var(--accent-color)',
-            background: 'rgba(0,255,65,0.04)',
-            padding: '0.6rem 0.8rem',
-            borderRadius: '6px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.3rem'
-          }}>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>INCIDENT SOLVER:</div>
-            <div style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>@{user.username}</div>
-            <button 
-              onClick={onLogout}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#ff4444',
-                textAlign: 'left',
-                padding: 0,
-                cursor: 'pointer',
-                fontSize: '0.65rem',
-                textDecoration: 'underline',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: '700'
-              }}
-            >
-              DISCONNECT
-            </button>
-          </div>
-        ) : (
-          <button 
-            className="action-btn" 
-            onClick={triggerAuthModal} 
-            style={{ 
-              justifyContent: 'center', 
-              width: '100%', 
-              background: 'rgba(var(--accent-rgb), 0.1)', 
-              borderColor: 'var(--accent-color)', 
-              color: 'var(--accent-color)',
-              fontWeight: '800'
-            }}
-          >
-            🔑 LOGIN / REGISTER
-          </button>
-        )}
         <div className="system-status">
           <span className="status-dot"></span>
           <span>SYS.ONLINE: 2026</span>
