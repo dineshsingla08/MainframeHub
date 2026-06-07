@@ -25,8 +25,8 @@
     --bg-card: #080c14;                     /* Solid, no transparency or blur */
     --border-primary: #00ff66;
     --border-muted: #00993d;                /* Solid bold green borders */
-    --text-primary: #00ff66;
-    --text-secondary: #00e059;              /* High contrast green instead of dim gray */
+    --text-primary: #ffffff;                /* Readable solid white text */
+    --text-secondary: #b0b0b0;              /* Clean light gray secondary text */
     --text-light: #ffffff;                  /* Solid white for main text readability */
     --glow-primary: 0 0 10px rgba(0, 255, 102, 0.4);
     --glow-subtle: 0 0 5px rgba(0, 255, 102, 0.2);
@@ -44,8 +44,8 @@
     --bg-card: #150a00;                     /* Solid, no transparency or blur */
     --border-primary: #ffaa00;
     --border-muted: #996600;                /* Solid bold amber borders */
-    --text-primary: #ffaa00;
-    --text-secondary: #e69900;              /* High contrast amber instead of dim gray */
+    --text-primary: #ffffff;                /* Readable solid white text */
+    --text-secondary: #b0b0b0;              /* Clean light gray secondary text */
     --text-light: #ffffff;                  /* Solid white for main text readability */
     --glow-primary: 0 0 10px rgba(255, 170, 0, 0.4);
     --glow-subtle: 0 0 5px rgba(255, 170, 0, 0.2);
@@ -55,24 +55,24 @@
     --accent-rgb: 255, 170, 0;
 }
 
-/* THEME 3: CYBERPUNK COBALT - Pure Solid Black Terminal Style */
-.theme-cyberpunk {
+/* THEME 3: COBALT CLASSIC - Pure Solid Black Terminal Style */
+.theme-cyber {
     --bg-base: #000000;                     /* Pure black background */
     --bg-panel: #05081c;                    /* Solid dark cobalt panel */
     --bg-panel-hover: #0c1236;
     --bg-card: #080b26;                     /* Solid, no transparency or blur */
     --border-primary: #00f0ff;
     --border-muted: #00a4b3;                /* Solid bold cyan borders */
-    --text-primary: #00f0ff;
-    --text-secondary: #00d5e3;              /* High contrast cyan instead of dim gray */
+    --text-primary: #ffffff;                /* Readable solid white text */
+    --text-secondary: #b0b0b0;              /* Clean light gray secondary text */
     --text-light: #ffffff;                  /* Solid white for main text readability */
     --glow-primary: 0 0 10px rgba(0, 240, 255, 0.4);
     --glow-subtle: 0 0 5px rgba(0, 240, 255, 0.2);
     --badge-bg: #002b33;
     --terminal-header: #020412;
-    --accent-color: #ff007f;
-    --accent-rgb: 255, 0, 127;
-    --glow-accent: 0 0 15px rgba(255, 0, 127, 0.35);
+    --accent-color: #00f0ff;
+    --accent-rgb: 0, 240, 255;
+    --glow-accent: 0 0 15px rgba(0, 240, 255, 0.35);
 }
 
 body {
