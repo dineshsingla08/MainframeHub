@@ -1,0 +1,252 @@
+{
+  "JCL": {
+    "category": "JCL",
+    "questions": [
+      {
+        "id": 1,
+        "question": "What causes an S0C4 abend in a JCL execution step, how is it debugged, and how does the REGION parameter relate to memory abends?",
+        "answer": "An S0C4 abend is a protection exception occurring when a program attempts to access a storage area to which it does not have access permissions, typically due to an uninitialized pointer, array index out of bounds, or mismatched parameter lists between caller and subprogram. The REGION parameter in JCL specifies the virtual storage limits (e.g., REGION=64M or REGION=0M for unlimited dynamic allocation). While REGION prevents out-of-memory abends (S878/S822), it does not prevent S0C4 protection violations, which are strictly logical indexing or memory alignment errors.",
+        "architect_tip": "In modern hybrid cloud/DevOps environments, use IBM File Manager or dynamic memory analysis logs to trace parameter mapping. Always pass parameters via Linkage Section with matching variable structures to avoid pointer address misalignment."
+      },
+      {
+        "id": 2,
+        "question": "How does the COND parameter on the JOB and EXEC cards perform conditional step execution, and what is its evaluation logic?",
+        "answer": "The COND parameter implements return code testing. If a COND test evaluates to TRUE, the corresponding step is bypassed. For example, COND=(4,LT) means: 'If 4 is less than the return code of any previous step, bypass this step.' Evaluation is inverted compared to typical programming logic. Testing can be applied at the JOB level (bypasses all remaining steps if true) or EXEC card level (bypasses that specific step only).",
+        "architect_tip": "Modern enterprise shops phase out COND parameters in favor of JCL IF-THEN-ELSE execution structures. IF/THEN blocks are highly readable, support logical operators (AND/OR), and integrate cleanly with automated DevOps CI/CD pipeline linters."
+      },
+      {
+        "id": 3,
+        "question": "Explain how JCL handles Generation Data Group (GDG) allocation, specifically how relative offsets like (+1) are resolved during step execution and failure.",
+        "answer": "In JCL, a relative offset (+1) creates a new generation of a dataset. During a multi-step job run, a (+1) dataset allocated in Step 1 remains (+1) for all subsequent steps of the same execution. It is only cataloged and resolved to a physical absolute generation (GxxxxVxx) upon successful job termination. If the job abends, the generation is rolled back, depending on the DISP disposition parameters (e.g., DISP=(NEW,CATLG,DELETE)).",
+        "architect_tip": "In automated hybrid pipelines, ensure abended steps delete incomplete generations before restart. Use utility scripts or modern scheduler APIs (Control-M, Tivoli Workload Scheduler) to automate cleanups and avoid G0001V00 duplication."
+      },
+      {
+        "id": 4,
+        "question": "Explain the three parameters of the DISP statement: DISP=(status, normal-disp, abnormal-disp). What are the default values if omitted?",
+        "answer": "The DISP parameter specifies dataset status and execution disposition. Status can be NEW, OLD, SHR, or MOD. Normal-disp dictates what happens if the step completes successfully (KEEP, CATLG, UNCATLG, DELETE, PASS). Abnormal-disp handles step failure. If omitted, JCL defaults to DISP=(NEW,KEEP,KEEP) or, if cataloged previously, inherits status based on positional settings. Standard practice is to explicitly declare abnormal disposition to avoid stranded files.",
+        "architect_tip": "For DFSMS-managed volumes, always use CATLG for successful executions and DELETE or CATLG for abends. PASS should be avoided in multi-step workflows as it relies on system-managed temp space that may leak across job boundaries."
+      },
+      {
+        "id": 5,
+        "question": "How do you tune DFSORT or SYNCSORT execution steps to optimize memory usage and minimize I/O overhead?",
+        "answer": "Optimize sorting steps by providing sufficient memory buffers through the JCL REGION parameter and specifying the dynamic allocation of sorting workspaces via the DYNAREQ or DYNSPC parameters. Ensure sorting algorithms run in memory (In-Memory Sorts) rather than writing temporary sort work files (SORTWK01, SORTWK02) to disk. Use DFSORT control statements like OPTION SIZE=MAX and block sizes that match track configurations.",
+        "architect_tip": "Configure DFSORT to leverage IBM zHPF (High Performance FICON) for storage I/O, reducing sorting latency by up to 50% in hybrid mainframe integrations where large volumes of files are transferred daily."
+      },
+      {
+        "id": 6,
+        "question": "What are the common pitfalls of using the IEFBR14 utility in JCL, and how does the DISP parameter resolve file deletion issues?",
+        "answer": "IEFBR14 is a dummy assembler program that immediately returns control (using Branch to Register 14). It is commonly used to allocate or delete datasets using the DISP parameter. A common pitfall is attempting to delete a non-existent dataset with DISP=(OLD,DELETE), which causes a JCL error (dataset not found). To prevent this, use DISP=(MOD,DELETE) which allocates the file if it does not exist, and then deletes it upon step completion.",
+        "architect_tip": "In DevOps automated environments, standardize on IDCAMS DELETE commands instead of IEFBR14. IDCAMS provides return code control (using SET MAXCC) which prevents false-positive JCL execution failures."
+      },
+      {
+        "id": 7,
+        "question": "What is the physical difference between SB37, SD37, and SE37 space abends, and how are they resolved?",
+        "answer": "These space abends occur during dataset write/extension: SB37 occurs when a dataset requires more space but the maximum of 16 extents per volume has been reached. SD37 occurs when a dataset runs out of space on the current volume and no secondary volumes are defined or available. SE37 occurs when a partitioned dataset (PDS) runs out of directory blocks, preventing new member creation even if physical data space remains.",
+        "architect_tip": "Migrate traditional PDS libraries to PDSE (Partitioned Dataset Extended). PDSE automatically manages directory blocks dynamically, eliminating SE37 errors and the need for frequent library compression."
+      },
+      {
+        "id": 8,
+        "question": "Explain STEPLIB vs JOBLIB precedence. How does the system search for load modules when both are defined?",
+        "answer": "JOBLIB is defined immediately after the JOB card and applies to all steps within the job. STEPLIB is defined within a specific EXEC step. When both are present, STEPLIB overrides JOBLIB for that step. The search order for load modules is: (1) STEPLIB, (2) JOBLIB, (3) Link Pack Area (LPA), and (4) System Link List (LNKLST, e.g. SYS1.LINKLIB).",
+        "architect_tip": "In CI/CD release pipelines, place testing load libraries in STEPLIB to test modules in isolation before promoting them to system-wide LNKLST. This ensures dev versions do not interfere with active production workloads."
+      },
+      {
+        "id": 9,
+        "question": "How do you override symbolic parameters in cataloged procedures (PROCs), and what are the overrides' limitations?",
+        "answer": "Override symbols by specifying the parameter name on the EXEC statement calling the PROC (e.g., //STEP1 EXEC MYPROC,OUTDIR='PROD.OUT'). If overrides are needed for specific DD cards within the PROC, specify the step name followed by the DD name (e.g. //MYPROC.SYSIN DD DSN=...). Overrides must follow the exact execution order of the steps inside the PROC.",
+        "architect_tip": "Avoid nested PROC overrides where possible. In modern architectures, use JCL INCLUDE panels to isolate configuration parameters, making JCL easier to maintain and lint in git repositories."
+      },
+      {
+        "id": 10,
+        "question": "How are VSAM AMP parameters (specifically BUFND and BUFNI) used to tune I/O performance in JCL?",
+        "answer": "The AMP parameter on JCL DD statements overrides the default VSAM buffer allocations. BUFND specifies the number of data buffers (tune high for sequential reads to enable multi-track read-ahead). BUFNI specifies the number of index buffers (tune high for random key lookups to cache index levels in memory, preventing physical disk seeks).",
+        "architect_tip": "For large-scale transaction databases, use SMS VSAM SMB (System Managed Buffering) parameters in the storage class to dynamically adjust buffers at runtime, removing the need for static JCL overrides."
+      },
+      {
+        "id": 11,
+        "question": "Explain the life cycle and scope of temporary datasets in JCL (denoted by &&NAME).",
+        "answer": "Temporary datasets (prefixed with double ampersands, like &&TEMP) exist only for the duration of the job run. They are allocated on system-designated spool volumes and automatically deleted when the job ends. JCL handles parameter routing by passing them via DISP=(NEW,PASS) in the creator step and receiving them with DISP=(OLD,DELETE) in the consumer step.",
+        "architect_tip": "In high-throughput batch environments, avoid writing large temporary datasets to physical disk. Instead, allocate them to virtual I/O (VIO) devices using UNIT=VIO to keep data in system paging memory and optimize speed."
+      },
+      {
+        "id": 12,
+        "question": "What is the PARM parameter in JCL, and what are its physical limitations when passing arguments to COBOL programs?",
+        "answer": "The PARM parameter passes execution arguments from JCL to the main program (e.g., PARM='PROD,2026'). The maximum length of the PARM string is 100 characters. In the COBOL program, this data is received in the LINKAGE SECTION as a structured record where the first 2 bytes contain the length of the string, followed by the text.",
+        "architect_tip": "To pass configuration parameters exceeding 100 characters in modern hybrid integrations, read configurations from a SYSIN DD card or reference an external properties dataset instead of using PARM."
+      },
+      {
+        "id": 13,
+        "question": "What is the architectural purpose of DD DUMMY in JCL, and how does it affect program operations?",
+        "answer": "DD DUMMY redirects program I/O operations to a null device. When a program reads a DD DUMMY file, the system immediately returns an End-of-File (EOF) status (File Status 10 in COBOL). When a program writes to DD DUMMY, the output is discarded. This allows testing programs or bypassing optional logs without modifying the source code.",
+        "architect_tip": "When dummying VSAM files, use DD DUMMY combined with a dummy DCB (e.g. DCB=(DSORG=PS)) or allocation parameters to prevent COBOL file open failures due to missing catalog definitions."
+      },
+      {
+        "id": 14,
+        "question": "Compare the legacy JCL COND parameter with the modern IF-THEN-ELSE execution structure.",
+        "answer": "The COND parameter performs tests on return codes of previous steps, bypassing steps if the condition evaluates to TRUE. The IF-THEN-ELSE JCL syntax uses standard boolean evaluation: steps inside the IF block execute only if the expression evaluates to TRUE (e.g. IF (STEP1.RC = 0) THEN). IF-THEN-ELSE supports logical operators (AND, OR, NOT) and makes JCL code readable.",
+        "architect_tip": "Migrate all legacy COND constructs to IF-THEN-ELSE structures. This aligns batch definitions with standard programming structures, making JCL maintenance easier for younger DevOps engineers."
+      },
+      {
+        "id": 15,
+        "question": "Explain System Managed Storage (SMS) parameters (STORCLAS, DATACLAS, MGMTCLAS) and how they replace traditional JCL properties.",
+        "answer": "SMS parameters delegate physical dataset management to the system storage administrator. STORCLAS defines performance requirements (replacing UNIT and VOL parameters). DATACLAS defines record format, LRECL, and space (replacing DCB and SPACE allocations). MGMTCLAS defines backup and retention policies (replacing direct volume management).",
+        "architect_tip": "Use SMS classes to abstract physical storage locations. This allows cloud storage backup integrations to move older datasets to virtual tape/object storage automatically, without updating JCL code."
+      },
+      {
+        "id": 16,
+        "question": "What JCL parameters are required to read a multi-volume dataset stored on tape libraries?",
+        "answer": "To read a multi-volume dataset, specify the unit type (e.g. UNIT=TAPE), the tape volume serial numbers in order (e.g., VOL=SER=(T00001,T00002)), and the tape label type (usually LABEL=(1,SL) for Standard Label, first file). JCL dynamically requests tape mounts as execution progresses.",
+        "architect_tip": "In modern mainframes, physical tapes are replaced by Virtual Tape Libraries (VTL). VTL caches tape images on high-speed RAID disk arrays and syncs backups to cloud object store buckets, eliminating manual mounts."
+      },
+      {
+        "id": 17,
+        "question": "What are the structural differences in JCL execution handling between JES2 and JES3 subsystems?",
+        "answer": "JES2 and JES3 are Job Entry Subsystems. JES2 executes jobs independently on available systems in a multi-system network (MVS sysplex) based on job classes. JES3 manages resources centrally, scheduling and allocating devices (like tapes and disks) globally before job execution begins.",
+        "architect_tip": "As IBM has standardized modern z/OS environments on JES2 (with JES3 being deprecated), ensure JCL scripts do not rely on JES3-specific control statements (like //*MAIN). Standardize on JES2 control parameters."
+      },
+      {
+        "id": 18,
+        "question": "How do you compress a Partitioned Dataset (PDS) in JCL to release unused space and recover directory blocks?",
+        "answer": "Use the IEBCOPY utility program with the COPY statement, assigning the same dataset name to both the input (SYSUT1) and output (SYSUT2) DD statements. This rebuilds the PDS index, merges extents, and releases deleted spaces.",
+        "architect_tip": "Automate PDS compression in daily maintenance chains, or migrate PDS files to PDSE libraries which manage space dynamically and do not require compression, avoiding lockouts."
+      },
+      {
+        "id": 19,
+        "question": "How do you implement the RESTART parameter in a JCL JOB card to resume execution from a failed step?",
+        "answer": "Specify RESTART=stepname on the JOB card (or RESTART=stepname.procstepname if restarting inside a PROC). MVS will bypass all steps prior to the designated step and resume execution. Ensure datasets allocated with DISP=NEW in the restarted step have their disposition handled to prevent duplicate file errors.",
+        "architect_tip": "When designing restartable jobs, ensure that every step deletes its output files in an IEFBR14 block before allocating them, making jobs cleanly rerun-safe."
+      },
+      {
+        "id": 20,
+        "question": "Explain the TIME parameter in JCL, its syntax, and how to debug a resulting S322 abend.",
+        "answer": "The TIME parameter sets the maximum CPU execution time allowed for a job or step (syntax: TIME=(minutes,seconds) or TIME=1440 for infinite execution). An S322 abend occurs when execution exceeds this time. Debug by checking for infinite loops in the program, missing index sweeps, or slow database responses.",
+        "architect_tip": "Do not set TIME=1440 or TIME=NOLIMIT on general batch jobs, as infinite loops could consume CPU capacity. Reserve infinite time parameters for transaction monitors like CICS or database managers."
+      }
+    ]
+  },
+  "COBOL": {
+    "category": "COBOL",
+    "questions": [
+      {
+        "id": 21,
+        "question": "Explain the physical memory layout of COMP-3 (Packed Decimal) fields in COBOL. How is the sign represented, and how do you calculate the byte size?",
+        "answer": "COMP-3 stores numbers using Binary Coded Decimal (BCD), placing two digits in each byte. The last half-byte (nibble) contains the sign. Hex 'C' represents positive, 'D' represents negative, and 'F' represents unsigned. The formula to calculate storage size in bytes is: `(Number of digits + 1) / 2` (rounded up). For example, PIC S9(7) COMP-3 takes 4 bytes, storing 7 digits and the sign.",
+        "architect_tip": "Always declare Packed Decimal variables with an odd number of digits (e.g. S9(7) rather than S9(8)). Declaring an even number leaves the first half-byte unused, which can cause data representation errors or compiler warnings."
+      },
+      {
+        "id": 22,
+        "question": "What causes an S0C7 Data Exception abend, how is it debugged, and how does the NUMPROC compiler option affect it?",
+        "answer": "An S0C7 abend occurs when a program performs arithmetic operations on a field containing invalid numeric data (e.g., spaces or alphanumeric characters in a COMP-3 or zoned decimal field). Debug by checking the offset in the abend dump, matching it to the compiler map (LIST output) to identify the variable. The NUMPROC compiler option determines how the compiler validates and normalizes sign nibbles, with NUMPROC(PFD) offering high performance by assuming valid signs, while NUMPROC(NOPFD) generates extra validation instructions to prevent abends.",
+        "architect_tip": "In dynamic microservices integrations, sanitize incoming alphanumeric inputs using the 'NUMERIC' class test or 'FUNCTION NUMVAL' before moving data to arithmetic variables, preventing S0C7 abends in production."
+      },
+      {
+        "id": 23,
+        "question": "Compare the performance, requirements, and execution differences between SEARCH and SEARCH ALL in COBOL table handling.",
+        "answer": "SEARCH performs a sequential (linear) scan from the current index value. It does not require sorted data. You must manually initialize the index using the SET statement. SEARCH ALL performs a binary search. It requires the table to be sorted and defined with the ASCENDING/DESCENDING KEY clause. It automatically sets the index to the midpoint and splits search spaces, operating in O(log N) complexity.",
+        "architect_tip": "Use SEARCH ALL for tables containing more than 50 elements. Ensure the keys are sorted; if keys are out of order, SEARCH ALL will bypass entries without warning, leading to logic bugs."
+      },
+      {
+        "id": 24,
+        "question": "Explain the differences between passing parameters BY REFERENCE, BY CONTENT, and BY VALUE in a COBOL CALL statement.",
+        "answer": "BY REFERENCE (default) passes the memory address of the variable. If the subprogram modifies the parameter, the change is reflected in the calling program. BY CONTENT passes a copy of the variable's value; the subprogram cannot modify the original variable. BY VALUE passes the value directly on the call stack (common in C/C++ integrations), preventing memory sharing.",
+        "architect_tip": "Use CALL ... BY CONTENT when calling utility modules. This protects the calling program's memory state and prevents subprograms from accidentally corrupting primary variables."
+      },
+      {
+        "id": 25,
+        "question": "How does the INITIALIZE statement function? What are its default behaviors for numeric, alphanumeric, and FILLER fields?",
+        "answer": "INITIALIZE sets variables to default values based on category. Alphanumeric fields are set to SPACES; numeric fields are set to ZEROES. By default, FILLER fields and variables with REDEFINES clauses are bypassed. You can override defaults using the REPLACING phrase (e.g., INITIALIZE MY-RECORD REPLACING ALPHANUMERIC BY SPACES).",
+        "architect_tip": "Use INITIALIZE to clear records before reuse. Avoid manual MOVE spaces/zeroes loops, as INITIALIZE optimizes memory clearing using compiler-generated block instructions."
+      },
+      {
+        "id": 26,
+        "question": "What does File Status '35' mean during a file OPEN operation, and how should it be managed?",
+        "answer": "File Status 35 indicates that the dataset specified in the JCL DD statement (matching the SELECT ASSIGN clause) is missing, not cataloged, or cannot be found. If the file is optional, opening it will crash the run-unit unless handled.",
+        "architect_tip": "For optional input files, specify 'SELECT OPTIONAL' in the file-control block. When opened, if the file is missing, the system will return File Status 05 instead of crashing with 35, allowing the program to continue."
+      },
+      {
+        "id": 27,
+        "question": "What are the structural differences between Static and Dynamic CALLs in COBOL?",
+        "answer": "Static CALLs (CALL 'SUBPROG') are resolved at bind/link-edit time. The subprogram load module is physically merged into the main program's executable. Dynamic CALLs (CALL WS-SUBPROG, where variable holds name) are resolved at runtime. The system loads the subprogram module from the STEPLIB/LNKLST library only when executed.",
+        "architect_tip": "Use dynamic calls for rarely used subprograms or large libraries. This reduces the size of the main executable and allows updates to subprograms without recompiling the main program."
+      },
+      {
+        "id": 28,
+        "question": "Explain REDEFINES vs RENAMES. What are their use cases and syntactic rules?",
+        "answer": "REDEFINES overrides the storage allocation of an existing field, allowing the same memory space to be accessed with different structures or data types. It must follow the redefined variable immediately. RENAMES (level 66) regroups elementary variables into a new structure. It is declared at the end of the record description.",
+        "architect_tip": "Use REDEFINES to parse alphanumeric fields containing varying formats (e.g., string vs numeric). Avoid redefining variables to larger sizes, which can corrupt adjacent memory."
+      },
+      {
+        "id": 29,
+        "question": "What is the function of the REWRITE statement in COBOL, and what are its logical requirements?",
+        "answer": "REWRITE updates an existing record in a file opened in I-O (Input-Output) mode. For sequential files, a READ statement must precede the REWRITE statement. For indexed/relative files, the record is updated matching the key field.",
+        "architect_tip": "Always verify that the record key has not been altered between the READ and REWRITE operations on indexed VSAM files, otherwise the rewrite operation will fail with File Status 21."
+      },
+      {
+        "id": 30,
+        "question": "How does the EVALUATE statement function? How does it handle multiple conditions compared to nested IFs?",
+        "answer": "EVALUATE is COBOL's switch-case structure. It evaluates multiple conditions in parallel (using EVALUATE TRUE ALSO TRUE structures). It prevents deeply nested IF-ELSE structures and improves code readability.",
+        "architect_tip": "Use EVALUATE to implement business decision tables. This keeps conditional logic flat and matches transaction business rules, making code audits easier."
+      },
+      {
+        "id": 31,
+        "question": "What are COBOL Intrinsic Functions, and how is FUNCTION NUMVAL-C used?",
+        "answer": "Intrinsic Functions are built-in compiler helpers (prefixed with FUNCTION). `FUNCTION NUMVAL-C` converts alphanumeric strings representing currency (e.g. '$1,234.56') into floating-point or decimal numeric values, removing formatting symbols.",
+        "architect_tip": "Use intrinsic functions like CURRENT-DATE to get timestamps including milliseconds, or upper/lower case helpers to sanitize input strings during integration."
+      },
+      {
+        "id": 32,
+        "question": "How do Explicit Scope Terminators (e.g., END-IF, END-PERFORM) prevent logical errors?",
+        "answer": "Explicit scope terminators terminate a statement block, preventing the logic from dropping through to adjacent statements. In legacy COBOL, blocks were terminated strictly by a period (.), which was hard to see and prone to error.",
+        "architect_tip": "Avoid using periods (.) to terminate logic blocks inside the PROCEDURE DIVISION. Instead, use explicit scope terminators and limit the use of periods to paragraph boundaries."
+      },
+      {
+        "id": 33,
+        "question": "Detail the loop execution pattern for retrieving database records using a DB2 Cursor in COBOL.",
+        "answer": "The pattern is: (1) DECLARE cursor statement, (2) OPEN cursor, (3) PERFORM a loop FETCHing records into host variables UNTIL SQLCODE = 100 (or SQLCODE < 0), and (4) CLOSE the cursor.",
+        "architect_tip": "Always inspect SQLCODE after OPEN and FETCH. Close cursors in an AT END block to release locks and prevent thread resource exhaustion."
+      },
+      {
+        "id": 34,
+        "question": "How do Indicator Variables prevent SQLCODE -305 errors when querying nullable DB2 columns?",
+        "answer": "An SQLCODE -305 occurs when an SQL query returns a NULL column value to a host variable that has no associated indicator variable. Pair a 2-byte binary integer (PIC S9(4) COMP) indicator variable with the host variable in the SELECT statement (e.g., SELECT COL INTO :VAR :IND-VAR).",
+        "architect_tip": "Check the indicator variable value first. If it is -1, the column value is NULL. This prevents runtime crashes in transaction pipelines."
+      },
+      {
+        "id": 35,
+        "question": "How does a COBOL program interface with CICS screens and pass data using COMMAREA?",
+        "answer": "The program reads data from the CICS Communication Area (COMMAREA) defined in the LINKAGE SECTION using the `EXEC CICS LINK` or `EXEC CICS RETURN` statements. The CICS transaction manager passes data between programs using this buffer.",
+        "architect_tip": "Keep COMMAREA structures small (under 32KB) to save region memory. For larger structures, migrate to CICS Channels and Containers, which offer unlimited space."
+      },
+      {
+        "id": 36,
+        "question": "What is the difference between COMP (Binary) and COMP-5 variables in COBOL?",
+        "answer": "COMP represents standard binary storage, allocating bytes based on the picture clause size. COMP-5 stores data in hardware-native formats (word, half-word), allowing variables to exceed the maximum value of their PIC clause up to physical byte capacity.",
+        "architect_tip": "Use COMP-5 when calling API routines written in C/C++ or interfacing with operating system variables, preventing truncation errors."
+      },
+      {
+        "id": 37,
+        "question": "Explain how a PERFORM ... VARYING ... UNTIL loop evaluates its condition and increments loop indices.",
+        "answer": "The loop initializes the index, evaluates the UNTIL condition, and if FALSE, executes the designated paragraph. It then increments the index and repeats evaluation. The test occurs before paragraph execution.",
+        "architect_tip": "Ensure loop limits are correct. If the UNTIL condition evaluates to TRUE initially, the paragraph is never executed, which can cause uninitialized variable bugs."
+      },
+      {
+        "id": 38,
+        "question": "Compare the memory allocation of WORKING-STORAGE SECTION vs LINKAGE SECTION variables.",
+        "answer": "WORKING-STORAGE allocates memory statically when the program loads. LINKAGE SECTION variables do not allocate memory; they act as a map (template) over memory addresses passed by the calling program.",
+        "architect_tip": "Never reference a LINKAGE SECTION variable before it has been initialized via a CALL ... USING statement or CICS linkage, otherwise it will cause an S0C4 abend."
+      },
+      {
+        "id": 39,
+        "question": "How do you parse variable-length text strings using STRING and UNSTRING statements?",
+        "answer": "Use STRING to concatenate multiple variables into a target field, specifying delimiters (e.g. DELIMITED BY SPACE). Use UNSTRING to split a source string into multiple variables based on delimiters.",
+        "architect_tip": "Always check the POINTER option and ON OVERFLOW clauses to catch buffer truncations when parsing user-submitted parameters."
+      },
+      {
+        "id": 40,
+        "question": "How does the NUMPROC compiler option affect sign normalization and comparison performance in COBOL?",
+        "answer": "NUMPROC(PFD) assumes sign nibbles are standard (C, D, F) and performs fast comparisons. NUMPROC(NOPFD) validates sign nibbles, adding CPU overhead but preventing abends if fields contain non-standard signs.",
+        "architect_tip": "Use NUMPROC(PFD) for math-heavy applications to optimize CPU cycles. Sanitization tests must be run on external files before operations are executed."
+      }
+    ]
+  }
+}
