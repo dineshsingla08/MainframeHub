@@ -711,6 +711,65 @@ export const CodingSandbox = () => {
         }
     };
 
+    const handleExplainCode = () => {
+        setIsRunning(true);
+        setRunResult(null);
+        setLogs(['[AI ASSISTANT] Generating code summary...']);
+        setErrors([]);
+
+        setTimeout(() => {
+            let explanation = '';
+            if (challenge.id === 'jcl-alloc') {
+                explanation = 'This JCL job uses the IEFBR14 dummy program to allocate a new sequential dataset. It defines the dataset name, specifies it should be cataloged, requests disk space, and sets DCB parameters like record length.';
+            } else if (challenge.id === 'cobol-abend') {
+                explanation = 'This COBOL program handles potentially invalid numeric data. The correct implementation adds a defensive "IF ... IS NUMERIC" check to validate the data before performing arithmetic, preventing a severe S0C7 crash.';
+            } else if (challenge.id === 'sql-groupby') {
+                explanation = 'This SQL query joins the DEPARTMENTS and EMPLOYEES tables. It groups the results by department to calculate the total headcount and average salary for each department, ordering the final list by the highest average salary.';
+            } else if (challenge.id === 'sql-dedup') {
+                explanation = 'This SQL query uses a CTE combined with the ROW_NUMBER() window function. By partitioning by Account Name and Branch ID, it ranks duplicates and filters for ROW_NUM = 1 to keep only unique records.';
+            } else if (challenge.id === 'sql-run-total') {
+                explanation = 'This SQL query calculates a cumulative running balance. It uses the SUM() window function over a partition of ACCOUNT_ID, ordering by TRANSACTION_DATE to aggregate amounts progressively.';
+            } else if (challenge.id === 'cobol-unstring') {
+                explanation = 'This COBOL snippet uses the UNSTRING command to parse a comma-separated variable (CSV) string and map the extracted values directly into the corresponding structural variables.';
+            } else if (challenge.id === 'jcl-gdg') {
+                explanation = 'This JCL job executes the IDCAMS utility to define a Generation Data Group (GDG) base, specifying a limit for how many generations to keep and using SCRATCH to delete old generations.';
+            } else if (challenge.id === 'jcl-sort') {
+                explanation = 'This JCL job uses DFSORT to read, sort, and output a dataset. It sorts the data starting at position 10 and uses OMIT COND to filter out records where the first character is "D".';
+            } else if (challenge.id === 'sql-second-max') {
+                explanation = 'This query uses the DENSE_RANK() window function to find the second highest salary. DENSE_RANK ensures that ties do not cause rank numbers to be skipped.';
+            } else {
+                explanation = 'This code is designed to solve the current mainframe scenario.';
+            }
+
+            setLogs([
+                '[AI ASSISTANT] ✨ Code Gist / Summary:',
+                '> ' + explanation,
+                '',
+                '[AI ASSISTANT] Ready to test? Click SUBMIT / EXECUTE to run this code.'
+            ]);
+            setIsRunning(false);
+        }, 1200);
+    };
+
+    const handleFindErrors = () => {
+        setIsRunning(true);
+        setRunResult(null);
+        setLogs(['[AI ASSISTANT] Scanning for syntactical errors and compiling suggestions...']);
+        setErrors([]);
+
+        setTimeout(() => {
+            const res = challenge.validate(code);
+            if (res.success) {
+                setLogs(prev => [...prev, '[AI ASSISTANT] ✅ No syntax errors detected! Your code logic looks perfectly correct.']);
+            } else {
+                setLogs(prev => [...prev, '[AI ASSISTANT] ❌ Syntax/Logic errors found. I have generated solutions for you below.']);
+                // Prefixing errors to make them look like AI solutions
+                setErrors(res.errors.map(err => `[AI FIX SUGGESTION] ${err}`));
+            }
+            setIsRunning(false);
+        }, 1200);
+    };
+
     const linesCount = code.split('\n').length;
     const lineNumbers = Array.from({ length: Math.max(linesCount, 1) }, (_, i) => {
         // Format line number like a mainframe terminal (e.g. 000100, 000200)
@@ -788,6 +847,12 @@ export const CodingSandbox = () => {
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button className="action-btn" onClick={handleReset} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
                                 <Icon name="reset" /> Reset
+                            </button>
+                            <button className="action-btn" onClick={handleExplainCode} disabled={isRunning} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', background: 'rgba(0,191,255,0.1)', color: '#00bfff', border: '1px solid rgba(0,191,255,0.4)' }}>
+                                💡 Explain Code
+                            </button>
+                            <button className="action-btn" onClick={handleFindErrors} disabled={isRunning} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', background: 'rgba(255,170,0,0.1)', color: '#ffaa00', border: '1px solid rgba(255,170,0,0.4)' }}>
+                                🔍 Find Errors
                             </button>
                             <button
                                 className="action-btn mastered-active"

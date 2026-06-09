@@ -18,6 +18,24 @@ export const Flashcards = ({
     starred = [],
     toggleStarred
 }) => {
+    const handleGotIt = () => {
+        const currentId = fcDeck[fcIndex].id;
+        if (!mastered.includes(currentId)) {
+            toggleMastered(currentId);
+        }
+        
+        if (fcIndex < fcDeck.length - 1) {
+            if (fcFlipped) {
+                setFcFlipped(false);
+                setTimeout(() => {
+                    setFcIndex(prev => prev + 1);
+                }, 300);
+            } else {
+                setFcIndex(prev => prev + 1);
+            }
+        }
+    };
+
     return (
         <div>
             {/* Flashcard Settings Filter Banner */}
@@ -72,26 +90,25 @@ export const Flashcards = ({
                             </div>
 
                             {/* BACK OF CARD */}
-                            <div className="flashcard-face flashcard-back" onClick={(e) => e.stopPropagation()}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', width: '100%' }}>
-                                    <span className="badge badge-category">{fcDeck[fcIndex].category}</span>
-                                    <button 
-                                        className="action-btn" 
-                                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
-                                        onClick={() => setFcFlipped(false)}
-                                        type="button"
-                                    >
-                                        FLIP BACK
-                                    </button>
-                                </div>
+                            <div className="flashcard-face flashcard-back">
+                                <span className="badge badge-category" style={{ position: 'absolute', top: '1.5rem', left: '1.5rem' }}>
+                                    {fcDeck[fcIndex].category}
+                                </span>
+                                <span className={`badge badge-difficulty-${fcDeck[fcIndex].level.toLowerCase()}`} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem' }}>
+                                    {fcDeck[fcIndex].level}
+                                </span>
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column', width: '100%', marginTop: '1.5rem', height: 'calc(100% - 3.2rem)' }}>
+                                    <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.75rem', borderBottom: '1px solid var(--border-muted)', paddingBottom: '0.5rem' }}>
+                                        {fcDeck[fcIndex].question}
+                                    </h4>
 
-                                <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
-                                    {fcDeck[fcIndex].question}
-                                </h4>
-
-                                <div style={{ fontSize: '1rem', lineHeight: '1.65', color: 'var(--text-light)', overflowY: 'auto', maxHeight: '250px', paddingRight: '0.5rem' }}>
-                                    {fcDeck[fcIndex].answer}
+                                    <div style={{ fontSize: '0.95rem', lineHeight: '1.65', color: 'var(--text-light)', overflowY: 'auto', flex: 1, paddingRight: '0.5rem' }}>
+                                        {fcDeck[fcIndex].answer}
+                                    </div>
                                 </div>
+                                
+                                <div className="flashcard-instruction">CLICK TO FLIP BACK</div>
                             </div>
                         </div>
                     </div>
@@ -124,7 +141,7 @@ export const Flashcards = ({
                     <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         <button 
                             className={`action-btn ${mastered.includes(fcDeck[fcIndex].id) ? 'mastered-active' : ''}`}
-                            onClick={() => toggleMastered(fcDeck[fcIndex].id)}
+                            onClick={handleGotIt}
                             type="button"
                         >
                             <Icon name="check" /> Got It!

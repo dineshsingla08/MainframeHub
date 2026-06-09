@@ -64,7 +64,32 @@ REASON DETAIL: Transaction cancelled due to Runaway Task Time limit exceeded.`,
 IEF212I STARTJOB STEP3 - DATASET CONFLICTS WITH EXISTING CATALOG RECORD`,
     analysis: "In Step 1, the dataset was allocated as (+1). In JCL, (+1) is resolved to a physical generation (e.g. G0005V00) on job start. If Step 3 abends, the catalog entry G0005V00 still physically exists on disk. Restarting from Step 3 trying to allocate (+1) again points to the same resolved generation name, causing conflict.",
     solution: "1. Delete the failed generation using utility IDCAMS before restarting:\n   DELETE 'PROD.LEDGER.BACKUP.G0005V00'\n2. Restructure the restart script to run a cleanup step first.\n3. Standardize JCLs to use disposition parameter DISP=(NEW,CATLG,DELETE) so that abended steps automatically delete partial file allocations.",
-    tip: "Use modern job schedulers (like Control-M) that automatically manage dynamic dataset catalog cleanups on job restarts."
+  },
+  {
+    id: 6,
+    title: "DB2 SQLCODE -811 (Multiple Rows in SELECT INTO)",
+    category: "DB2",
+    difficulty: "Developer",
+    problem: "A COBOL program fails intermittently with SQLCODE -811 during the daily processing of employee bonuses. The program uses a SELECT INTO statement to fetch the employee's current active project ID.",
+    log: `DSNT408I SQLCODE = -811, ERROR: THE RESULT OF AN EMBEDDED SELECT STATEMENT OR A SUBSELECT IN THE BASIC PREDICATE IS MORE THAN ONE ROW.
+DSNT418I SQLSTATE = 21000 SQLERRP = DSNXRED SQLERRD = -250 ...`,
+    analysis: "A `SELECT ... INTO ...` statement in DB2 expects exactly one row (or zero rows, giving SQLCODE +100). The query is returning multiple rows for a single employee because the employee is assigned to multiple active projects concurrently, which the developer did not anticipate.",
+    solution: "1. If the business logic expects multiple projects, replace the `SELECT INTO` with a DB2 CURSOR to fetch and process all active projects in a loop.\n2. If only one project is needed (e.g., the primary one), modify the SQL to add `FETCH FIRST 1 ROW ONLY` or apply a more restrictive `WHERE` clause (like checking a `PRIMARY_FLAG = 'Y'`).",
+    tip: "Always ensure database constraints (like Unique Indexes) match the assumptions made in code. If a relationship is 1-to-many, never use a singleton SELECT INTO."
+  },
+  {
+    id: 7,
+    title: "COBOL S0C7 (Data Exception)",
+    category: "Batch",
+    difficulty: "Beginner",
+    problem: "A new COBOL program that calculates payroll taxes abends with a System Code 0C7 (S0C7) right after reading the first record from the input sequential file.",
+    log: `IEA995I SYMPTOM DUMP OUTPUT
+SYSTEM COMPLETION CODE=0C7  REASON CODE=00000000
+ TIME=14.30.22  SEQ=00123  CPU=0000  ASID=004A
+ PSW AT TIME OF ERROR  078D1000   8001A244  ILC 6  INTC 07`,
+    analysis: "An S0C7 is a Data Exception, which occurs when a numeric operation (like ADD, COMPUTE, or a numeric IF condition) encounters non-numeric data in a numeric field (typically a COMP-3 packed decimal field). The input file record likely has spaces or invalid characters in a field defined as numeric.",
+    solution: "1. Look at the failing COBOL offset (e.g. 0001A244) in the compiler listing to find the exact line of code.\n2. Inspect the input file data at the failing byte offset using HEX ON in ISPF to verify the contents.\n3. Add a defensive `IF field IS NUMERIC` check in the COBOL program before performing arithmetic operations, or fix the upstream process that wrote the bad data.",
+    tip: "Data validation at the system entry point is critical. Always validate external data formats before moving them into internal packed-decimal (COMP-3) fields."
   }
 ];
 

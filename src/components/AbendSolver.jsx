@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { abendsData } from '../data/abends';
+import { SIMULATOR_SCENARIOS } from '../data/debuggerScenarios';
 
 const SEVERITY_COLORS = {
   CRITICAL: '#ff4444',
@@ -7,98 +8,8 @@ const SEVERITY_COLORS = {
   MEDIUM: '#00ccff'
 };
 
-const CATEGORIES = ['ALL', 'System', 'Space', 'DB2', 'CICS'];
+const CATEGORIES = ['ALL', 'System', 'Space', 'DB2', 'CICS', 'File Status'];
 
-const SIMULATOR_SCENARIOS = [
-  {
-    id: 1,
-    title: "Batch Payroll Processing Failure",
-    log: `IEF450I PAYROLL JOB1 STEP20 - ABEND=S0C7 U0000 REASON=00000007
-GP0010I  *** DB2 SQLCA INTERCEPT IN PROGRAM PAYCALC ***
-CEE3250C The system detected a data exception (System Completion Code=0C7).
-         From entry point PAYROLL-CALC at statement 243 at address 1A09E380.
-SYSOUT OUTPUT:
-WS-HOURS = '40.00' (hex: F4F0F0F0)
-WS-RATE  = '     ' (hex: 4040404040) <-- ERROR`,
-    question1: "Which Abend code is displayed in the incident report?",
-    options1: ["S0C7", "S0C4", "S322", "SB37"],
-    answer1: "S0C7",
-    question2: "What is the primary architectural solution to resolve this issue?",
-    options2: [
-      "Initialize WS-RATE to zero and check 'IF WS-RATE IS NUMERIC' before processing.",
-      "Increase the JCL REGION size to REGION=64M in the JOB card.",
-      "Add a secondary allocation block to the space definition in JCL.",
-      "Recompile the DB2 package with timestamp token updates."
-    ],
-    answer2: "Initialize WS-RATE to zero and check 'IF WS-RATE IS NUMERIC' before processing.",
-    explanation: "The log shows WS-RATE contains spaces (hex 4040404040), which causes a S0C7 data exception when used in arithmetic. The correct solution is initialization and numeric verification."
-  },
-  {
-    id: 2,
-    title: "Production File Export Failure",
-    log: `IEF251I EXPORTJOB STEP10 - ABEND=S37 U0000 REASON=00000004
-IEC030I 37-04,IFG0554A,EXPORTJOB,STEP10,SYSUT2,3390,VOL102,PROD.EXPORT.DATA
-IEF472I EXPORTJOB STEP10 - COMPLETION CODE - SYSTEM=B37 MEMBER=00000004
-JCL CARD REFERENCE:
-//SYSUT2   DD DSN=PROD.EXPORT.DATA,DISP=(NEW,CATLG,DELETE),
-//            UNIT=SYSDA,SPACE=(TRK,(10,5))`,
-    question1: "Which Abend code is displayed in the incident report?",
-    options1: ["SB37", "SD37", "SE37", "S806"],
-    answer1: "SB37",
-    question2: "What is the primary architectural solution to resolve this issue?",
-    options2: [
-      "Increase the space parameters in JCL (e.g. SPACE=(CYL,(50,10)) and use RLSE).",
-      "Compress the targeted dataset using IEBCOPY.",
-      "Declare null indicators for the output fields.",
-      "Add a STEPLIB parameter targeting the program loadlib."
-    ],
-    answer2: "Increase the space parameters in JCL (e.g. SPACE=(CYL,(50,10)) and use RLSE).",
-    explanation: "The system completion code B37 indicates volume extent exhaustion. Increasing JCL space parameters and releasing unused tracks (RLSE) handles the large volume export safely."
-  },
-  {
-    id: 3,
-    title: "Financial Ledger Database Write Error",
-    log: `DSNT408I SQLCODE = -305, ERROR: THE NOT NULL CONSTRAINT IS VIOLATED OR A NULL VALUE IS RETRIEVED INTO A HOST VARIABLE WITHOUT AN INDICATOR VARIABLE
-DSNT418I SQLSTATE = 22002, DB2 SUB-SYSTEM=DB2P
-PROGRAM CODE ERROR POINT:
-EXEC SQL
-    SELECT EMAIL INTO :WS-EMAIL FROM USERS WHERE USER_ID = :WS-ID
-END-EXEC.`,
-    question1: "Which SQL/Abend code is displayed in the incident report?",
-    options1: ["SQLCODE -305", "SQLCODE -818", "SQLCODE -904", "SQLCODE -911"],
-    answer1: "SQLCODE -305",
-    question2: "What is the primary architectural solution to resolve this issue?",
-    options2: [
-      "Declare a 2-byte binary host variable (PIC S9(4) COMP) and bind it as a null-indicator.",
-      "Execute the BIND PACKAGE step to update consistency tokens.",
-      "Switch lock granularity from tablespace level to row level.",
-      "Add a CALL ... USING statement to map working-storage variables."
-    ],
-    answer2: "Declare a 2-byte binary host variable (PIC S9(4) COMP) and bind it as a null-indicator.",
-    explanation: "SQLCODE -305 occurs when DB2 returns a NULL value into a host variable that has no null-indicator variable defined. Adding a 2-byte COMP variable captures this safely."
-  },
-  {
-    id: 4,
-    title: "Dev Compile Output File Blocked",
-    log: `IEC032I E37-04,IFG0554P,DEVJOB,COMPILE,SYSLMOD,3390,DEV002,DEV.PROJECT.LOADLIB
-IEF472I DEVJOB COMPILE - COMPLETION CODE - SYSTEM=E37
-JCL CARD REFERENCE:
-//SYSLMOD  DD DSN=DEV.PROJECT.LOADLIB(PAYROLL),DISP=SHR
-*** ALL DIRECTORY BLOCKS ARE FULL ***`,
-    question1: "Which Abend code is displayed in the incident report?",
-    options1: ["SE37", "SD37", "SB37", "S0C4"],
-    answer1: "SE37",
-    question2: "What is the most modern architectural solution to prevent this permanently?",
-    options2: [
-      "Migrate the PDS dataset to PDSE format by specifying DSNTYPE=LIBRARY in JCL.",
-      "Add a compression step using IEBCOPY utility with COND=EVEN.",
-      "Change JCL disposition from SHR to MOD.",
-      "Double the volume capacity limit using UNIT=(SYSDA,2)."
-    ],
-    answer2: "Migrate the PDS dataset to PDSE format by specifying DSNTYPE=LIBRARY in JCL.",
-    explanation: "An SE37 indicates PDS directory blocks exhaustion. Migrating to PDSE (DSNTYPE=LIBRARY) manages directory allocation dynamically, bypassing directory block limits."
-  }
-];
 
 export const AbendSolver = () => {
   const [selectedCode, setSelectedCode] = useState(abendsData[0]);
@@ -378,8 +289,39 @@ export const AbendSolver = () => {
               Analyze mainframe production failure reports, isolate abend codes, and resolve outages.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+              INCIDENT:
+            </span>
+            <select
+              value={simIndex}
+              onChange={e => {
+                setSimIndex(parseInt(e.target.value));
+                setSimAnswer1(null);
+                setSimAnswer2(null);
+                setSimChecked(false);
+                setSimResult(null);
+              }}
+              style={{
+                background: 'rgba(0,0,0,0.5)',
+                color: 'var(--accent-color)',
+                border: '1px solid rgba(var(--accent-rgb), 0.3)',
+                borderRadius: '4px',
+                padding: '0.25rem 0.5rem',
+                fontSize: '0.75rem',
+                fontFamily: 'var(--font-mono)',
+                cursor: 'pointer',
+                outline: 'none',
+                maxWidth: '220px'
+              }}
+            >
+              {SIMULATOR_SCENARIOS.map((sc, idx) => (
+                <option key={sc.id} value={idx} style={{ background: '#111', color: '#fff' }}>
+                  #{sc.id}: {sc.title}
+                </option>
+              ))}
+            </select>
+            <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>
               REPAIR SCORE: <span style={{ color: 'var(--accent-color)', fontWeight: '800' }}>{score} XP</span>
             </span>
             <button 

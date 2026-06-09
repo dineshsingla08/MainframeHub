@@ -160,7 +160,7 @@ export const ResourceLibrary = () => {
   const section = RESOURCES[activeSection];
 
   return (
-    <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 140px)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', gap: '0' }}>
       {/* Sidebar */}
       <div style={{ width: '200px', minWidth: '200px', background: 'rgba(0,0,0,0.3)', borderRight: '1px solid var(--border-muted)', overflowY: 'auto', padding: '1rem 0' }}>
         <div style={{ padding: '0 1rem', marginBottom: '0.8rem', fontSize: '0.7rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', letterSpacing: '2px' }}>

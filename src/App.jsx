@@ -19,6 +19,13 @@ import { Forum } from './components/Forum';
 import { AuthModal } from './components/AuthModal';
 import { Footer } from './components/Footer';
 import { allQuestions as questionsData } from './data/questions';
+import { AdminConsole } from './components/AdminConsole';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { About } from './components/About';
+import { Leaderboard } from './components/Leaderboard';
+import { Careers } from './components/Careers';
+import { Feedback } from './components/Feedback';
+import { Blogs } from './components/Blogs';
 import './index.css';
 
 export default function App() {
@@ -34,6 +41,7 @@ export default function App() {
         return localStorage.getItem('mf_auth_token') || null;
     });
     const [showAuthModal, setShowAuthModal] = useState(false);
+    const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
     
     // Search and Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -75,11 +83,18 @@ export default function App() {
     const [quizTimer, setQuizTimer] = useState(0);
     const [quizTimerId, setQuizTimerId] = useState(null);
     const [quizHistory, setQuizHistory] = useState([]);
+    const [flaggedQuestions, setFlaggedQuestions] = useState([]);
     const [userName, setUserName] = useState('');
     const [showCert, setShowCert] = useState(false);
 
     // Global Command Palette State
     const [showCommandPalette, setShowCommandPalette] = useState(false);
+
+    // Tutorials Navigation State
+    const [activeTutorialTopic, setActiveTutorialTopic] = useState(null);
+
+    // Tab reset keys to force remount
+    const [tabKeys, setTabKeys] = useState({});
 
     // Fetch progress on mount/token change
     useEffect(() => {
@@ -223,15 +238,14 @@ export default function App() {
     };
 
     const handleLogout = () => {
-        if (window.confirm("Are you sure you want to log out of your session?")) {
-            localStorage.removeItem('mf_auth_token');
-            localStorage.removeItem('mf_auth_user');
-            setUser(null);
-            setToken(null);
-            setMastered([]);
-            setNeedsReview([]);
-            setStarred([]);
-        }
+        localStorage.removeItem('mf_auth_token');
+        localStorage.removeItem('mf_auth_user');
+        setUser(null);
+        setToken(null);
+        setMastered([]);
+        setNeedsReview([]);
+        setStarred([]);
+        setActiveTab('dashboard');
     };
 
     const handleTabSwitch = (tabId) => {
@@ -239,10 +253,21 @@ export default function App() {
             if (window.confirm("You are currently taking an exam. Leaving this tab will abort your progress and forfeit the mock score. Are you sure you want to exit?")) {
                 setQuizActive(false);
                 setActiveTab(tabId);
+                if (tabId !== 'tutorials') setActiveTutorialTopic(null);
             }
         } else {
+            if (activeTab === tabId) {
+                // If user clicks the same tab again, reset its state by changing its key
+                setTabKeys(prev => ({ ...prev, [tabId]: (prev[tabId] || 0) + 1 }));
+            }
             setActiveTab(tabId);
+            if (tabId !== 'tutorials') setActiveTutorialTopic(null);
         }
+    };
+
+    const handleNavigateToTutorial = (topic) => {
+        setActiveTutorialTopic(topic);
+        setActiveTab('tutorials');
     };
 
     const getFilteredQuestions = () => {
@@ -257,6 +282,10 @@ export default function App() {
     };
 
     const handleStartQuiz = (category, difficulty = 'ALL', length = 10) => {
+        if (!user) {
+            setShowAuthModal(true);
+            return;
+        }
         let pool = questionsData;
         if (category !== 'ALL') pool = pool.filter(q => q.category === category);
         if (difficulty !== 'ALL') pool = pool.filter(q => q.level === difficulty);
@@ -269,6 +298,7 @@ export default function App() {
         setQuizScore(0);
         setQuizTimer(0);
         setQuizHistory([]);
+        setFlaggedQuestions([]);
         setShowCert(false);
     };
 
@@ -287,7 +317,7 @@ export default function App() {
         }]);
     };
 
-    const handleNextQuizQuestion = () => {
+    const handleNextQuizQuestion = async () => {
         if (quizIndex < quizQuestions.length - 1) {
             setQuizIndex(prev => prev + 1);
             setQuizSelectedOption(null);
@@ -296,6 +326,33 @@ export default function App() {
             setQuizActive(false);
             const passScore = Math.ceil(quizQuestions.length * 0.8);
             if (quizScore >= passScore) setShowCert(true);
+
+            // Send Email Report
+            if (user && user.email) {
+                let reportStr = quizHistory.map((h, i) => {
+                    const q = quizQuestions[i];
+                    return `Q${i+1}: ${q.question}\nYour Answer: ${q.quizOptions[h.selectedOption]}\nCorrect Answer: ${q.quizOptions[q.quizAnswerIndex]}\n`;
+                }).join('\n');
+
+                try {
+                    await fetch('http://localhost:5000/api/progress/send-exam-report', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            userEmail: user.email,
+                            category: quizCategory,
+                            score: quizScore,
+                            total: quizQuestions.length,
+                            reportDetails: reportStr
+                        })
+                    });
+                } catch(e) {
+                    console.error("Failed to send exam report email", e);
+                }
+            }
         }
     };
 
@@ -311,8 +368,10 @@ export default function App() {
 
     // Tab labels for the header
     const TAB_LABELS = {
-        dashboard: 'Dashboard',
+        dashboard: 'Overview',
         analytics: 'Progress Analytics',
+        about: 'About Us',
+        leaderboard: 'Mainframe Leaderboard',
         explorer: 'Study Explorer',
         flashcards: 'Flashcards',
         tutorials: 'Tutorials Hub',
@@ -324,8 +383,12 @@ export default function App() {
         scenarios: 'Incident Scenarios',
         roadmap: 'Career Roadmap',
         resources: 'Resource Library',
+        careers: 'Mainframe Careers',
         architecture: 'System Diagrams',
         forum: 'Community Forum',
+        blogs: 'Blogs',
+        admin: 'Admin Console',
+        feedback: 'User Feedback',
     };
 
     return (
@@ -335,6 +398,7 @@ export default function App() {
                 activeTab={activeTab} 
                 setActiveTab={handleTabSwitch} 
                 handleResetAllProgress={handleResetAllProgress} 
+                user={user}
             />
 
             {/* MAIN WORKSPACE */}
@@ -376,6 +440,24 @@ export default function App() {
                             }}>
                                 <span style={{ color: 'var(--text-secondary)' }}>USER:</span>
                                 <span style={{ fontWeight: '800', color: 'var(--accent-color)' }}>@{user.username}</span>
+                                <button 
+                                    onClick={() => setShowChangePasswordModal(true)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'var(--text-secondary)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.7rem',
+                                        textDecoration: 'underline',
+                                        fontFamily: 'var(--font-mono)',
+                                        fontWeight: '700',
+                                        padding: '0 0.4rem',
+                                        borderLeft: '1px solid rgba(255, 255, 255, 0.15)',
+                                        borderRight: '1px solid rgba(255, 255, 255, 0.15)'
+                                    }}
+                                >
+                                    🔑 PASSWORD
+                                </button>
                                 <button 
                                     onClick={handleLogout}
                                     style={{
@@ -440,6 +522,14 @@ export default function App() {
                     />
                 )}
 
+                {activeTab === 'about' && (
+                    <About setActiveTab={handleTabSwitch} />
+                )}
+
+                {activeTab === 'leaderboard' && (
+                    <Leaderboard user={user} />
+                )}
+
                 {activeTab === 'explorer' && (
                     <StudyExplorer 
                         searchQuery={searchQuery}
@@ -471,19 +561,28 @@ export default function App() {
                         setFcIndex={setFcIndex}
                         fcFlipped={fcFlipped}
                         setFcFlipped={setFcFlipped}
+                        key={tabKeys['flashcards'] || 0}
                         mastered={mastered}
-                        toggleMastered={toggleMastered}
                         needsReview={needsReview}
+                        toggleMastered={toggleMastered}
                         toggleNeedsReview={toggleNeedsReview}
                         starred={starred}
                         toggleStarred={toggleStarred}
                     />
                 )}
 
-                {activeTab === 'tutorials' && <TutorialsHub />}
+                {activeTab === 'tutorials' && (
+                    <TutorialsHub 
+                        key={tabKeys['tutorials'] || 0}
+                        initialCategory={activeTutorialTopic} 
+                        clearInitialCategory={() => setActiveTutorialTopic(null)} 
+                    />
+                )}
 
                 {activeTab === 'quiz' && (
                     <ExamCenter 
+                        key={tabKeys['quiz'] || 0}
+                        user={user}
                         quizActive={quizActive}
                         quizCategory={quizCategory}
                         setQuizCategory={setQuizCategory}
@@ -497,44 +596,67 @@ export default function App() {
                         quizAnswered={quizAnswered}
                         quizScore={quizScore}
                         quizTimer={quizTimer}
-                        userName={userName}
-                        setUserName={setUserName}
+                        quizHistory={quizHistory}
                         showCert={showCert}
                         setShowCert={setShowCert}
                         setQuizActive={setQuizActive}
-                        handleStartQuiz={handleStartQuiz}
-                        handleSelectQuizOption={handleSelectQuizOption}
-                        handleNextQuizQuestion={handleNextQuizQuestion}
+                        flaggedQuestions={flaggedQuestions}
+                        setFlaggedQuestions={setFlaggedQuestions}
+                        userName={userName}
+                        setUserName={setUserName}
+                        onStartQuiz={handleStartQuiz}
+                        onSelectOption={handleSelectQuizOption}
+                        onNextQuestion={handleNextQuizQuestion}
+                        onPrevQuestion={handlePrevQuizQuestion}
+                        onSubmitQuiz={handleSubmitQuiz}
+                        onFlagQuestion={handleFlagQuestion}
+                        onCloseCert={() => {
+                            setShowCert(false);
+                            setQuizActive(false);
+                        }}
                     />
                 )}
 
-                {activeTab === 'interview' && <MockInterview />}
+                {activeTab === 'interview' && <MockInterview key={tabKeys['interview'] || 0} user={user} onRequireAuth={() => setShowAuthModal(true)} />}
 
-                {activeTab === 'sandbox' && <CodingSandbox />}
+                {activeTab === 'sandbox' && <CodingSandbox key={tabKeys['sandbox'] || 0} />}
 
-                {activeTab === 'sqllab' && <SQLPracticeLab />}
+                {activeTab === 'sqllab' && <SQLPracticeLab key={tabKeys['sqllab'] || 0} />}
 
-                {activeTab === 'roadmap' && <CareerRoadmap />}
+                {activeTab === 'roadmap' && <CareerRoadmap key={tabKeys['roadmap'] || 0} onNavigateToTutorial={handleNavigateToTutorial} />}
 
-                {activeTab === 'resources' && <ResourceLibrary />}
+                {activeTab === 'resources' && <ResourceLibrary key={tabKeys['resources'] || 0} />}
 
-                {activeTab === 'architecture' && <ArchitectureDiagrams />}
+                {activeTab === 'careers' && <Careers key={tabKeys['careers'] || 0} user={user} />}
 
-                {activeTab === 'abendsolver' && <AbendSolver />}
+                {activeTab === 'architecture' && <ArchitectureDiagrams key={tabKeys['architecture'] || 0} />}
 
-                {activeTab === 'scenarios' && <Scenarios />}
+                {activeTab === 'abendsolver' && <AbendSolver key={tabKeys['abendsolver'] || 0} />}
+
+                {activeTab === 'scenarios' && <Scenarios key={tabKeys['scenarios'] || 0} />}
+
+                {activeTab === 'feedback' && <Feedback key={tabKeys['feedback'] || 0} />}
+
+                {activeTab === 'blogs' && <Blogs key={tabKeys['blogs'] || 0} user={user} />}
 
                 {activeTab === 'forum' && (
                     <Forum 
+                        key={tabKeys['forum'] || 0}
                         user={user}
-                        token={token}
-                        triggerAuthModal={() => setShowAuthModal(true)}
+                        setShowAuthModal={setShowAuthModal}
                     />
                 )}
+
+                {activeTab === 'admin' && user && (user.username === 'Dineshsingla08' || user.email === 'dineshsingla08@gmail.com') && <AdminConsole user={user} token={token} />}
                 </div>{/* end workspace-content */}
 
                 {/* FOOTER */}
-                <Footer setActiveTab={handleTabSwitch} />
+                <Footer setActiveTab={(tab) => {
+                    if (tab === activeTab) {
+                        setTabKeys(prev => ({ ...prev, [tab]: (prev[tab] || 0) + 1 }));
+                    }
+                    handleTabSwitch(tab);
+                }} />
             </div>
 
             {/* GLOBAL OVERLAYS */}
@@ -551,6 +673,12 @@ export default function App() {
                 <AuthModal 
                     onClose={() => setShowAuthModal(false)}
                     onLoginSuccess={handleLoginSuccess}
+                />
+            )}
+
+            {showChangePasswordModal && (
+                <ChangePasswordModal 
+                    onClose={() => setShowChangePasswordModal(false)}
                 />
             )}
         </div>

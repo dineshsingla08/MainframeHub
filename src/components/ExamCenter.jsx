@@ -22,7 +22,12 @@ export const ExamCenter = ({
     setQuizActive,
     handleStartQuiz,
     handleSelectQuizOption,
-    handleNextQuizQuestion
+    handleNextQuizQuestion,
+    user,
+    onRequireAuth,
+    quizHistory = [],
+    flaggedQuestions = [],
+    setFlaggedQuestions
 }) => {
     const totalQuestionsCount = quizQuestions.length || 10;
     const passingScore = Math.ceil(totalQuestionsCount * 0.8);
@@ -82,10 +87,10 @@ export const ExamCenter = ({
                                 onChange={(e) => setQuizLength(parseInt(e.target.value, 10))}
                                 style={{ background: '#101726', border: '1px solid var(--border-muted)', color: 'var(--text-light)', padding: '0.5rem 1rem', borderRadius: '6px', flexGrow: 1, outline: 'none' }}
                             >
-                                <option value="10">10 Questions</option>
-                                <option value="20">20 Questions</option>
-                                <option value="30">30 Questions</option>
+                                <option value="25">25 Questions</option>
                                 <option value="50">50 Questions</option>
+                                <option value="75">75 Questions</option>
+                                <option value="100">100 Questions</option>
                             </select>
                         </div>
 
@@ -105,7 +110,13 @@ export const ExamCenter = ({
                     <button 
                         className="action-btn" 
                         style={{ margin: '0 auto', padding: '0.85rem 2rem', fontSize: '1.05rem', backgroundColor: 'var(--badge-bg)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)', boxShadow: 'var(--glow-subtle)' }}
-                        onClick={() => handleStartQuiz(quizCategory, quizDifficulty, quizLength)}
+                        onClick={() => {
+                            if (!user) {
+                                if (onRequireAuth) onRequireAuth();
+                                return;
+                            }
+                            handleStartQuiz(quizCategory, quizDifficulty, quizLength);
+                        }}
                         type="button"
                     >
                         INITIATE ONLINE EXAMINATION
@@ -119,8 +130,33 @@ export const ExamCenter = ({
                         <div className="quiz-question-number">
                             QUESTION {quizIndex + 1} OF {quizQuestions.length} ({quizQuestions[quizIndex].category} - {quizQuestions[quizIndex].level})
                         </div>
-                        <div className="quiz-timer">
-                            <Icon name="clock" /> {Math.floor(quizTimer / 60)}:{(quizTimer % 60).toString().padStart(2, '0')}
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <button
+                                onClick={() => {
+                                    const qId = quizQuestions[quizIndex].id;
+                                    setFlaggedQuestions(prev => 
+                                        prev.includes(qId) ? prev.filter(id => id !== qId) : [...prev, qId]
+                                    );
+                                }}
+                                style={{
+                                    background: flaggedQuestions.includes(quizQuestions[quizIndex].id) ? '#ffaa0033' : 'transparent',
+                                    border: `1px solid ${flaggedQuestions.includes(quizQuestions[quizIndex].id) ? '#ffaa00' : 'var(--text-secondary)'}`,
+                                    color: flaggedQuestions.includes(quizQuestions[quizIndex].id) ? '#ffaa00' : 'var(--text-secondary)',
+                                    padding: '0.25rem 0.5rem',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'var(--font-mono)',
+                                    fontSize: '0.75rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem'
+                                }}
+                            >
+                                🚩 {flaggedQuestions.includes(quizQuestions[quizIndex].id) ? 'FLAGGED' : 'FLAG'}
+                            </button>
+                            <div className="quiz-timer">
+                                <Icon name="clock" /> {Math.floor(quizTimer / 60)}:{(quizTimer % 60).toString().padStart(2, '0')}
+                            </div>
                         </div>
                     </div>
 
@@ -235,23 +271,51 @@ export const ExamCenter = ({
                 </div>
             )}
 
-            {!quizActive && !showCert && quizQuestions.length > 0 && (
-                <div style={{ maxWidth: '600px', margin: '2rem auto 0 auto', background: 'var(--bg-panel)', border: '1px solid var(--border-muted)', borderRadius: '12px', padding: '1.5rem', textAlign: 'center' }}>
-                    <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#ef4444', marginBottom: '0.5rem' }}>
-                        ASSESSMENT COMPLETE
+            {!quizActive && (!showCert || showCert) && quizQuestions.length > 0 && quizIndex >= quizQuestions.length - 1 && (
+                <div style={{ maxWidth: '680px', margin: '2rem auto', background: 'var(--bg-panel)', border: '1px solid var(--border-muted)', borderRadius: '12px', padding: '1.5rem', textAlign: 'left' }}>
+                    <h4 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '1rem', fontFamily: 'var(--font-mono)' }}>
+                        📋 DETAILED EXAM REPORT
                     </h4>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                        You scored <strong>{quizScore} / {quizQuestions.length}</strong> ({Math.round((quizScore / quizQuestions.length) * 100)}%). 
-                        A minimum of <strong>80% ({passingScore} / {quizQuestions.length})</strong> is required to generate the System Operator Certificate.
-                    </p>
-                    <button 
-                        className="action-btn" 
-                        style={{ margin: '0 auto' }}
-                        onClick={() => handleStartQuiz(quizCategory, quizDifficulty, quizLength)}
-                        type="button"
-                    >
-                        Try Again
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {quizHistory.map((historyItem, idx) => {
+                            const q = quizQuestions.find(q => q.id === historyItem.questionId) || quizQuestions[idx];
+                            const isFlagged = flaggedQuestions.includes(q.id);
+                            
+                            return (
+                                <div key={idx} style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', borderLeft: `4px solid ${historyItem.isCorrect ? '#00ff41' : '#ff4444'}` }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.5rem' }}>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: '600' }}>
+                                            Q{idx + 1}. {q.question}
+                                        </div>
+                                        {isFlagged && <span style={{ color: '#ffaa00', fontSize: '0.8rem' }}>🚩 FLAGGED</span>}
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                        <span style={{ color: historyItem.isCorrect ? '#00ff41' : '#ff4444' }}>
+                                            Your Answer: {q.quizOptions[historyItem.selectedOption] || "No Answer"}
+                                        </span>
+                                    </div>
+                                    {!historyItem.isCorrect && (
+                                        <div style={{ fontSize: '0.85rem', color: '#00ff41' }}>
+                                            Correct Answer: {q.quizOptions[q.quizAnswerIndex]}
+                                        </div>
+                                    )}
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                                        Explanation: {q.answer}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                        <button 
+                            className="action-btn" 
+                            style={{ margin: '0 auto' }}
+                            onClick={() => handleStartQuiz(quizCategory, quizDifficulty, quizLength)}
+                            type="button"
+                        >
+                            Retake Exam
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

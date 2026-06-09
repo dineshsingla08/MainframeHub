@@ -51,7 +51,7 @@ const FOLLOW_UP_QUESTIONS = {
 
 const formatTime = (s) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 
-export const MockInterview = () => {
+export const MockInterview = ({ user, onRequireAuth }) => {
   const [phase, setPhase] = useState('setup'); // setup | intro | interview | review
   const [selectedDomain, setSelectedDomain] = useState('ALL');
   const [numQuestions, setNumQuestions] = useState(5);
@@ -72,9 +72,21 @@ export const MockInterview = () => {
   const domain = INTERVIEW_DOMAINS.find(d => d.id === selectedDomain);
 
   const startInterview = () => {
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
+
     let pool = allQuestions;
     if (selectedDomain !== 'ALL') pool = pool.filter(q => q.category === selectedDomain);
-    pool = pool.filter(q => q.options && q.options.length > 0);
+    
+    // Ensure we only select questions that have a valid answer (not just multiple-choice options)
+    pool = pool.filter(q => q.answer && q.answer.trim().length > 0);
+    
+    // If pool is empty, provide a fallback to prevent crashing
+    if (pool.length === 0) {
+        pool = allQuestions.filter(q => q.answer && q.answer.trim().length > 0);
+    }
     const selected = [...pool].sort(() => Math.random() - 0.5).slice(0, numQuestions);
     setQuestions(selected);
     setCurrentIdx(0);

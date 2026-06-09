@@ -223,6 +223,49 @@ ORDER BY DEPT_NO, ROW_NUM`,
       });
       return result.sort((a,b) => a.DEPT_NO.localeCompare(b.DEPT_NO) || a.ROW_NUM - b.ROW_NUM);
     }
+  },
+  {
+    id: 'case-statement',
+    title: 'Salary Classification (CASE)',
+    difficulty: 'Intermediate',
+    category: 'CASE',
+    prompt: 'Show EMP_NAME and a SALARY_BAND column: "HIGH" if salary > 100000, "MEDIUM" if 80000-100000, else "LOW".',
+    hint: 'Use a CASE WHEN ... THEN ... ELSE ... END statement.',
+    solution: `SELECT EMP_NAME,
+       CASE 
+         WHEN SALARY > 100000 THEN 'HIGH'
+         WHEN SALARY >= 80000 THEN 'MEDIUM'
+         ELSE 'LOW'
+       END AS SALARY_BAND
+FROM EMPLOYEE
+ORDER BY SALARY DESC`,
+    expectedCols: ['EMP_NAME', 'SALARY_BAND'],
+    execute: () => {
+      return VIRTUAL_TABLES.EMPLOYEE
+        .sort((a,b) => b.SALARY - a.SALARY)
+        .map(e => ({
+          EMP_NAME: e.EMP_NAME,
+          SALARY_BAND: e.SALARY > 100000 ? 'HIGH' : (e.SALARY >= 80000 ? 'MEDIUM' : 'LOW')
+        }));
+    }
+  },
+  {
+    id: 'coalesce-null',
+    title: 'Handling NULLs (COALESCE)',
+    difficulty: 'Beginner',
+    category: 'Functions',
+    prompt: 'Show EMP_NAME and MANAGER_ID. If the employee has no manager, display 0.',
+    hint: 'Use the COALESCE() function to replace NULL values.',
+    solution: `SELECT EMP_NAME,
+       COALESCE(MANAGER_ID, 0) AS MGR_ID
+FROM EMPLOYEE`,
+    expectedCols: ['EMP_NAME', 'MGR_ID'],
+    execute: () => {
+      return VIRTUAL_TABLES.EMPLOYEE.map(e => ({
+        EMP_NAME: e.EMP_NAME,
+        MGR_ID: e.MANAGER_ID === null ? 0 : e.MANAGER_ID
+      }));
+    }
   }
 ];
 
@@ -264,7 +307,7 @@ export const SQLPracticeLab = () => {
   const tableColumns = tableData.length > 0 ? Object.keys(tableData[0]) : [];
 
   return (
-    <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 140px)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', gap: '0' }}>
       {/* Left: Challenge List */}
       <div style={{ width: '240px', minWidth: '240px', background: 'rgba(0,0,0,0.3)', borderRight: '1px solid var(--border-muted)', overflowY: 'auto', padding: '1rem 0' }}>
         <div style={{ padding: '0 1rem', marginBottom: '0.8rem', fontSize: '0.7rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', letterSpacing: '2px' }}>

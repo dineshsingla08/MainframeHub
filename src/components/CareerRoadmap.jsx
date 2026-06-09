@@ -95,9 +95,29 @@ const LEARNING_PATHS = [
   { from: 'senior', to: 'manager', label: '~5+ years' },
 ];
 
-export const CareerRoadmap = () => {
+export const CareerRoadmap = ({ onNavigateToTutorial }) => {
   const [activeRole, setActiveRole] = useState('trainee');
-  const [activeTab, setActiveTab] = useState('skills');
+  const [activeTab, setActiveTabState] = useState('skills');
+
+  const mapSkillToTopic = (skillName) => {
+    const s = skillName.toLowerCase();
+    if (s.includes('jcl')) return 'JCL';
+    if (s.includes('cobol')) return 'COBOL';
+    if (s.includes('db2')) return 'DB2';
+    if (s.includes('cics')) return 'CICS';
+    if (s.includes('vsam')) return 'VSAM';
+    if (s.includes('rexx')) return 'REXX';
+    if (s.includes('ims')) return 'IMS DB/DC';
+    if (s.includes('racf') || s.includes('security') || s.includes('topsecret') || s.includes('acf2')) return 'RACF Security';
+    if (s.includes('z/os') || s.includes('parallel sysplex')) return 'z/OS Fundamentals';
+    if (s.includes('tso') || s.includes('ispf')) return 'TSO/ISPF';
+    if (s.includes('dfsort')) return 'DFSORT & Utilities';
+    if (s.includes('smf') || s.includes('performance')) return 'SMF & Performance';
+    if (s.includes('ca-7')) return 'CA-7 Scheduling';
+    if (s.includes('linux')) return 'Linux on Z';
+    if (s.includes('modern') || s.includes('zowe') || s.includes('devops')) return 'Mainframe Modernization';
+    return null;
+  };
 
   const role = ROLES.find(r => r.id === activeRole);
 
@@ -192,11 +212,7 @@ export const CareerRoadmap = () => {
             </div>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ textAlign: 'center', padding: '0.7rem 1.2rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: `1px solid ${role.color}44` }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>USA SALARY</div>
-                <div style={{ fontSize: '1rem', fontWeight: '800', color: role.color, fontFamily: 'var(--font-mono)' }}>{role.salary}</div>
-              </div>
-              <div style={{ textAlign: 'center', padding: '0.7rem 1.2rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: `1px solid ${role.color}44` }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>INDIA SALARY</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>EXPECTED SALARY (INR)</div>
                 <div style={{ fontSize: '1rem', fontWeight: '800', color: role.color, fontFamily: 'var(--font-mono)' }}>{role.salaryINR}</div>
               </div>
             </div>
@@ -207,7 +223,7 @@ export const CareerRoadmap = () => {
             {['skills', 'tasks', 'certs', 'tools'].map(tab => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => setActiveTabState(tab)}
                 style={{
                   padding: '0.4rem 0.9rem',
                   background: activeTab === tab ? role.color + '22' : 'transparent',
@@ -233,24 +249,46 @@ export const CareerRoadmap = () => {
               activeTab === 'tasks' ? role.tasks :
               activeTab === 'certs' ? role.certs :
               role.tools
-            ).map((item, idx) => (
-              <div key={idx} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-                padding: '0.6rem 0.8rem',
-                background: 'rgba(0,0,0,0.25)',
-                borderRadius: '6px',
-                border: `1px solid ${role.color}22`,
-                fontSize: '0.85rem',
-                color: 'var(--text-primary)'
-              }}>
-                <span style={{ color: role.color, flexShrink: 0, fontSize: '0.9rem' }}>
-                  {activeTab === 'skills' ? '▸' : activeTab === 'tasks' ? '✓' : activeTab === 'certs' ? '🏅' : '⚙️'}
-                </span>
-                {item}
-              </div>
-            ))}
+            ).map((item, idx) => {
+              const targetTopic = activeTab === 'skills' ? mapSkillToTopic(item) : null;
+              const isClickable = targetTopic && onNavigateToTutorial;
+              return (
+                <div 
+                  key={idx} 
+                  onClick={() => isClickable ? onNavigateToTutorial(targetTopic) : null}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    padding: '0.6rem 0.8rem',
+                    background: 'rgba(0,0,0,0.25)',
+                    borderRadius: '6px',
+                    border: `1px solid ${role.color}22`,
+                    fontSize: '0.85rem',
+                    color: 'var(--text-primary)',
+                    cursor: isClickable ? 'pointer' : 'default',
+                    transition: 'transform 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (isClickable) {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.background = 'rgba(0,0,0,0.4)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (isClickable) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.background = 'rgba(0,0,0,0.25)';
+                    }
+                  }}
+                >
+                  <span style={{ color: role.color, flexShrink: 0, fontSize: '0.9rem' }}>
+                    {activeTab === 'skills' ? '▸' : activeTab === 'tasks' ? '✓' : activeTab === 'certs' ? '🏅' : '⚙️'}
+                  </span>
+                  <span style={{ textDecoration: isClickable ? 'underline' : 'none' }}>{item}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

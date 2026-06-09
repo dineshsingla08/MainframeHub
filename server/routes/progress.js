@@ -54,4 +54,61 @@ router.post('/', auth, (req, res) => {
   });
 });
 
+// @route   GET api/progress/leaderboard
+// @desc    Get top users ranked by score
+router.get('/leaderboard', (req, res) => {
+  db.all(`
+    SELECT u.id, u.username, u.role, p.score, p.mastered, p.needs_review
+    FROM users u
+    LEFT JOIN user_progress p ON u.id = p.user_id
+    ORDER BY COALESCE(p.score, 0) DESC, u.username ASC
+    LIMIT 20
+  `, [], (err, rows) => {
+    if (err) {
+      console.error('Leaderboard query error:', err.message);
+      return res.status(500).json({ message: 'Database error fetching leaderboard.' });
+    }
+    
+    const leaderboard = (rows || []).map(row => {
+      let masteredCount = 0;
+      let needsReviewCount = 0;
+      try {
+        if (row.mastered) masteredCount = JSON.parse(row.mastered).length;
+        if (row.needs_review) needsReviewCount = JSON.parse(row.needs_review).length;
+      } catch (e) {
+        console.error('Error parsing progress lists:', e.message);
+      }
+      return {
+        id: row.id,
+        username: row.username,
+        role: row.role,
+        score: row.score || 0,
+        masteredCount,
+        needsReviewCount
+      };
+    });
+    
+    res.json(leaderboard);
+  });
+});
+
+const mailer = require('../utils/mailer');
+
+// @route   POST api/progress/send-exam-report
+// @desc    Send detailed exam report via email
+router.post('/send-exam-report', auth, async (req, res) => {
+  const { category, score, total, reportDetails, userEmail } = req.body;
+  if (!userEmail) {
+    return res.status(400).json({ message: 'User email is required to send report.' });
+  }
+
+  try {
+    const result = await mailer.sendExamReportEmail(userEmail, req.user.username, category, score, total, reportDetails);
+    res.json({ message: 'Exam report sent successfully.', ...result });
+  } catch (err) {
+    console.error('Error sending exam report email:', err);
+    res.status(500).json({ message: 'Failed to send exam report email.' });
+  }
+});
+
 module.exports = router;

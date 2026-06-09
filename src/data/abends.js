@@ -568,5 +568,265 @@ PROCEDURE DIVISION.
             MOVE DFHCOMMAREA TO WS-LOCAL-DATA
         END-IF
     END-IF.`
+  },
+  {
+    code: "S013",
+    title: "DCB Parameter Mismatch at OPEN",
+    category: "System",
+    severity: "HIGH",
+    description: "An S013 abend indicates that a dataset could not be opened successfully due to a conflict in DCB (Data Control Block) parameters (such as logical record length LRECL, block size BLKSIZE, or record format RECFM) between the COBOL SELECT/FD clause and the JCL DD statement or physical file label.",
+    causes: [
+      "The program FD clause specifies a different LRECL (Logical Record Length) than the JCL DD parameter or the cataloged dataset structure.",
+      "The block size is not a multiple of the record length in fixed blocked files (FBA/FB).",
+      "Mismatched record formats (e.g. attempting to read a variable-length file using fixed-block FD layout)."
+    ],
+    fix: "1. Locate the failing DD statement in the job log (specified in message IEC141I).\n2. Cross-reference the compiler program FD clause description with the physical file definition using dynamic catalog lookups.\n3. Align JCL SPACE, LRECL, and RECFM parameters to match the compiled program specifications.",
+    proTip: "Use dynamic block sizes (BLKSIZE=0) in JCL allocations to let DFSMS calculate the optimal block size for the device, preventing mismatch errors and maximizing track storage density.",
+    snippet: `* -- COBOL FD CLAUSE --
+FD  INPUT-FILE
+    RECORD CONTAINS 80 CHARACTERS
+    RECORDING MODE IS F.
+01  IN-RECORD        PIC X(80).
+
+* -- THE PROBLEM (JCL Mismatch) --
+//SYSUT1   DD DSN=MY.DATASET,DISP=SHR,
+//            LRECL=100,RECFM=FB  * <-- S013-34 Open Abend!
+
+* -- THE SOLUTION (Match JCL block structure) --
+//SYSUT1   DD DSN=MY.DATASET,DISP=SHR,
+//            LRECL=80,RECFM=FB`
+  },
+  {
+    code: "S213",
+    title: "Dataset Open Volume Mismatch",
+    category: "System",
+    severity: "HIGH",
+    description: "An S213 abend occurs during an OPEN statement when a partitioned dataset member was not found, or the dataset was bypassed due to missing catalog references on the target disk volume.",
+    causes: [
+      "The specified member of a Partitioned Dataset (PDS/PDSE) does not exist.",
+      "The dataset catalog entry is incorrect, pointing to a disk volume serial number that is offline or incorrect.",
+      "A tape file volume sequence mismatch."
+    ],
+    fix: "1. Verify member names in PDS/PDSE using ISPF panels.\n2. Ensure the catalog lists the dataset correctly, or supply explicit VOL=SER serial numbers in JCL.",
+    proTip: "Ensure all datasets are cataloged globally rather than referenced via static JCL volume serialization (VOL=SER) to avoid runtime S213 open failures.",
+    snippet: `* -- THE PROBLEM (Missing member in PDS) --
+//SYSIN    DD DSN=PROD.JCL.CNTL(MEMBERA),DISP=SHR  * <-- S213-04 if MEMBERA is missing!
+
+* -- THE SOLUTION (Ensure member exists) --
+//SYSIN    DD DSN=PROD.JCL.CNTL(MEMBERB),DISP=SHR  * MEMBERB verified in PDS directory`
+  },
+  {
+    code: "SQLCODE -805",
+    title: "DB2 Package Not Found",
+    category: "DB2",
+    severity: "HIGH",
+    description: "An SQLCODE -805 indicates that DB2 was unable to locate the package associated with the executed program plan. The package was not bound into the collection referenced by the plan.",
+    causes: [
+      "The package was compiled and precompiled, but BIND PACKAGE was not run in the subsystem.",
+      "The collection name (COLLID) or package name in the DBRM does not match the DB2 system catalog references.",
+      "Mismatch between the package consistency token (timestamp) and the precompiled source program module."
+    ],
+    fix: "1. Check the SQLERRMC field to find the collection name, package name, and consistency token.\n2. Run the JCL BIND step targeting the correct DB2 collection name.\n3. Recompile and rebind the program to align the load modules with the database catalog.",
+    proTip: "Define package collections dynamically in plans by using the PKLIST parameter: e.g., PKLIST(COLL.*). This enables binding new packages to the collection without rebinding the whole plan.",
+    snippet: `//-- JCL BIND PACKAGE STEP --
+//BINDDB2  EXEC PGM=IKJEFT01
+//SYSTSIN  DD *
+ DSN SYSTEM(DB2P)
+ BIND PACKAGE(PRODCOLL) MEMBER(PAYROLL) ACTION(REPLACE)
+ BIND PLAN(PAYPLAN) PKLIST(PRODCOLL.*) ACTION(REPLACE)
+ END
+/*`
+  },
+  {
+    code: "MAPFAIL",
+    title: "CICS MAPFAIL Screen Input Error",
+    category: "CICS",
+    severity: "MEDIUM",
+    description: "A MAPFAIL abend occurs in CICS when a RECEIVE MAP command is executed, but no data was entered on the terminal screen, or the user pressed an invalid AID key (like CLEAR or PA1/PA2) which does not transmit data fields.",
+    causes: [
+      "The user pressed CLEAR or PA keys and program logic tried to execute RECEIVE MAP directly.",
+      "The input map fields had zero length, transmitting no modified data tags (MDT) to CICS."
+    ],
+    fix: "1. Establish checks for terminal attention identifier keys (EIBAID) prior to executing RECEIVE MAP.\n2. Bind condition handling: EXEC CICS HANDLE CONDITION MAPFAIL(MAPFAIL-PARA) END-EXEC.",
+    proTip: "Enable the Modified Data Tag (MDT) attribute (FSET) in the map definition for at least one hidden field (like a screen title) to force the transmission of screen headers even if the user enters no data.",
+    snippet: `* -- THE SOLUTION (Check EIBAID before RECEIVE) --
+PROCEDURE DIVISION.
+    IF EIBAID = DFHCLEAR OR DFHPA1 OR DFHPA2
+        EXEC CICS SEND TEXT FROM(MSG-EXIT) FREEKB END-EXEC
+        EXEC CICS RETURN END-EXEC
+    END-IF.
+    
+    EXEC CICS HANDLE CONDITION
+        MAPFAIL(MAPFAIL-HANDLER-PARA)
+    END-EXEC.
+    
+    EXEC CICS RECEIVE MAP('SCREEN1') MAPSET('MAPSET1') END-EXEC.
+    ...
+MAPFAIL-HANDLER-PARA.
+    MOVE "PLEASE ENTER VALID DATA TO SUBMIT" TO MSG-OUT.
+    PERFORM SEND-ERROR-SCREEN-PARA.`
+  },
+  {
+    code: "File Status 35",
+    title: "Dataset/File Not Found",
+    category: "File Status",
+    severity: "HIGH",
+    description: "File Status 35 occurs when a program attempts to open a file in input or input-output mode, but the physical dataset referenced in the JCL DD statement or environment variable does not exist, is not cataloged, or is spelled incorrectly.",
+    causes: [
+      "The physical dataset specified in the JCL DD card does not exist in the system catalog.",
+      "The dataset name (DSN) in the JCL is misspelled.",
+      "The program attempts to open a relative/indexed file that has not been initialized."
+    ],
+    fix: "1. Check the JCL DD card corresponding to the logical file name and verify the DSN spelling.\n2. Verify the physical file exists using ISPF 3.4 or system catalogs.\n3. Change disposition parameters or pre-allocate the file using utilities (e.g., IEFBR14) if needed.",
+    proTip: "In corporate batch execution, use automated scheduler checks (like Control-M or OPC) to verify input file existence prior to job dispatch, preventing status 35 run-time abends.",
+    snippet: `* -- THE PROBLEM (Attempting to open non-existent file) --
+//SYSUT1   DD DSN=PROD.TRANS.DATA1,DISP=SHR  * If DSN does not exist
+...
+OPEN INPUT TRANSACTION-FILE.  * <-- Crashes with FILE STATUS = 35!
+
+* -- THE SOLUTION (Defensive checking in COBOL) --
+OPEN INPUT TRANSACTION-FILE.
+IF FILE-STATUS-VAR = "35"
+    DISPLAY "ERROR: Physical file not found!"
+    MOVE 12 TO RETURN-CODE
+    GOBACK
+END-IF.`
+  },
+  {
+    code: "File Status 39",
+    title: "Record Attributes Mismatch",
+    category: "File Status",
+    severity: "HIGH",
+    description: "File Status 39 occurs during an OPEN statement when the attributes of the physical file (such as Logical Record Length LRECL, Record Format RECFM, or block size) do not match the compiled file descriptions (FD block and record contains clause) inside the COBOL program.",
+    causes: [
+      "The program FD clause specifies a record size different from the physical dataset's LRECL.",
+      "The physical dataset has a variable record format (V/VB) but the program specifies a fixed format (F/FB), or vice versa.",
+      "The JCL specifies an overriding LRECL parameter that conflicts with the physical dataset label and program definitions."
+    ],
+    fix: "1. Identify the logical file name that failed to open and locate the corresponding JCL DD card.\n2. Query the catalog to find the exact RECFM and LRECL of the physical dataset.\n3. Modify the program's FD clause or re-allocate/modify JCL DD parameters to align them exactly.",
+    proTip: "Avoid hardcoding RECFM and LRECL values in JCL DD statements when referencing cataloged datasets; let DFSMS dynamically resolve the physical block size to match the compiled FD structure.",
+    snippet: `* -- THE PROBLEM (FD expects 80 bytes, dataset is 100 bytes) --
+FD  INPUT-FILE RECORD CONTAINS 80 CHARACTERS.
+...
+//SYSUT1   DD DSN=PROD.DATA,DISP=SHR  * physical LRECL=100
+...
+OPEN INPUT INPUT-FILE.  * <-- Crashes with FILE STATUS = 39!
+
+* -- THE SOLUTION (Align sizes) --
+FD  INPUT-FILE RECORD CONTAINS 100 CHARACTERS.
+* Now compiled program matches the physical file attributes.`
+  },
+  {
+    code: "File Status 92",
+    title: "Logic Error (Invalid I/O Operation)",
+    category: "File Status",
+    severity: "HIGH",
+    description: "File Status 92 indicates a program logic error where an I/O operation (like READ, WRITE, REWRITE, START, or CLOSE) is executed on a file that is not in a valid state for that operation (e.g. reading a file that is closed or has not been opened successfully).",
+    causes: [
+      "Attempting to READ or WRITE a file before executing the OPEN statement.",
+      "Attempting to READ a file that was opened in OUTPUT mode, or WRITE to a file opened in INPUT mode.",
+      "Attempting to execute I/O after a previous OPEN failed with a non-zero status key.",
+      "Closing a file that was never successfully opened."
+    ],
+    fix: "1. Check the program execution flow to ensure the OPEN statement was executed and was successful (returned status '00') before any READ/WRITE operations.\n2. Ensure the access mode (INPUT, OUTPUT, I-O) in the OPEN statement matches the operation (READ, WRITE, REWRITE).\n3. Implement status key checks after every OPEN to prevent cascading logic errors.",
+    proTip: "Always verify the status key immediately after an OPEN statement. If the status is not '00', log the error and bypass subsequent READ/WRITE logic to prevent File Status 92 errors.",
+    snippet: `* -- THE PROBLEM (Reading closed file) --
+* Initialization missed OPEN INPUT OUT-FILE
+READ OUT-FILE INTO WS-REC.  * <-- Crashes with FILE STATUS = 92!
+
+* -- THE SOLUTION (Defensive OPEN Verification) --
+OPEN INPUT OUT-FILE.
+IF OUT-FILE-STATUS NOT = "00"
+    DISPLAY "ERROR OPENING FILE, STATUS: " OUT-FILE-STATUS
+    MOVE 16 TO RETURN-CODE
+    GOBACK
+END-IF.
+* Safe to read now:
+READ OUT-FILE INTO WS-REC.`
+  },
+  {
+    code: "File Status 23",
+    title: "Record Key Not Found",
+    category: "File Status",
+    severity: "HIGH",
+    description: "File Status 23 occurs in relative or indexed files (like VSAM KSDS) when a random READ, START, DELETE, or REWRITE statement is executed, but the record with the specified key does not exist in the file.",
+    causes: [
+      "The search key variable (RECORD KEY or RELATIVE KEY) holds a value that does not exist in the VSAM dataset.",
+      "Key variables were not fully initialized or contained spaces or incorrect formatting.",
+      "The program attempts to read a record from an empty VSAM index file."
+    ],
+    fix: "1. Implement INVALID KEY clauses in your READ/START statements to catch key-not-found exceptions programmatically.\n2. Validate the key content (e.g., ensure no trailing spaces or corrupt characters) before calling the I/O statement.\n3. If using dynamic access, check the file status key after the read to handle missing keys gracefully.",
+    proTip: "Use the INVALID KEY clause in COBOL I/O operations on VSAM files to divert execution to a fallback path or error-log routine, preventing a runtime abend when keys are missing.",
+    snippet: `* -- THE PROBLEM (Abends if key doesn't exist) --
+MOVE "CUST999" TO CUST-KEY.
+READ CUST-FILE. * <-- Crashes with FILE STATUS = 23!
+
+* -- THE SOLUTION (INVALID KEY clause handling) --
+MOVE "CUST999" TO CUST-KEY.
+READ CUST-FILE
+    INVALID KEY
+        DISPLAY "CUSTOMER CUST999 NOT FOUND IN VSAM FILE"
+        PERFORM HANDLE-MISSING-CUSTOMER-PARA
+    NOT INVALID KEY
+        PERFORM PROCESS-CUSTOMER-PARA
+END-READ.`
+  },
+  {
+    code: "File Status 22",
+    title: "Duplicate Key Violation",
+    category: "File Status",
+    severity: "HIGH",
+    description: "File Status 22 occurs when a WRITE statement is executed on an indexed or relative file (like VSAM KSDS), but the key value of the record being written already exists in a unique index of the file, violating the unique key constraint.",
+    causes: [
+      "Attempting to write a record with an duplicate primary key to a VSAM KSDS.",
+      "Attempting to write a record that duplicates an active alternate index (AIX) key that was defined as UNIQUE.",
+      "Missing pre-existence checks in program logic before inserting new transaction records."
+    ],
+    fix: "1. Implement the INVALID KEY clause on your WRITE statement to handle duplicates programmatically.\n2. Run a random READ using the key prior to WRITE to determine if the record already exists, switching to REWRITE if found.\n3. Clean and sanitize input datasets to remove duplicate transaction keys before running the update step.",
+    proTip: "When writing to VSAM datasets, standardizing on a 'READ then WRITE/REWRITE' pattern or catching the Status 22 constraint violation programmatically prevents duplicate key crashes.",
+    snippet: `* -- THE PROBLEM (Duplicate key write failure) --
+MOVE "EMP102" TO EMP-KEY.
+WRITE EMP-RECORD.  * <-- Crashes with FILE STATUS = 22 if duplicate!
+
+* -- THE SOLUTION (INVALID KEY intercept & REWRITE fallback) --
+MOVE "EMP102" TO EMP-KEY.
+WRITE EMP-RECORD
+    INVALID KEY
+        DISPLAY "KEY ALREADY EXISTS, UPDATING INSTEAD..."
+        REWRITE EMP-RECORD
+    NOT INVALID KEY
+        DISPLAY "NEW EMPLOYEE RECORD SAVED"
+END-WRITE.`
+  },
+  {
+    code: "File Status 10",
+    title: "End of File Reached",
+    category: "File Status",
+    severity: "MEDIUM",
+    description: "File Status 10 indicates that a sequential READ statement was executed on a file, but the end of the file (EOF) has already been reached and no more records are available to read.",
+    causes: [
+      "The program continued calling the READ statement in a loop without checking if the previous read returned the EOF condition.",
+      "An infinite loop where the exit condition (like checking for EOF) is never met or updated.",
+      "Attempting to read a dataset that is empty."
+    ],
+    fix: "1. Add the AT END clause to the sequential READ statement to handle stream completion.\n2. Set an end-of-file flag variable when AT END triggers, and ensure the loop condition checks this flag before executing subsequent reads.\n3. Verify that the loop control variables are updated correctly.",
+    proTip: "Always use structured loops with a clear EOF indicator variable (e.g., PERFORM UNTIL EOF-FLAG = 'Y') to ensure the program never attempts to read past the end of the dataset.",
+    snippet: `* -- THE PROBLEM (Infinite loop reading past EOF) --
+* Loops indefinitely if EOF condition is not evaluated
+PERFORM UNTIL WS-DONE = "Y"
+    READ IN-FILE INTO WS-REC
+    PERFORM PROCESS-REC
+END-PERFORM.
+
+* -- THE SOLUTION (AT END Clause) --
+MOVE "N" TO WS-EOF-FLAG.
+PERFORM UNTIL WS-EOF-FLAG = "Y"
+    READ IN-FILE INTO WS-REC
+        AT END
+            MOVE "Y" TO WS-EOF-FLAG
+        NOT AT END
+            PERFORM PROCESS-REC
+    END-READ
+END-PERFORM.`
   }
 ];

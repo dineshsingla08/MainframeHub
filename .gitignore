@@ -45,3 +45,12 @@ temp/
 *.db
 *.db-journal
 *.sqlite
+
+# Extraction/conversion files and scripts
+extract*.cjs
+extracted*.js
+download.cjs
+main_bundle*.js
+rebuild_data.cjs
+server/check_users.cjs
+temp_sections.cjs

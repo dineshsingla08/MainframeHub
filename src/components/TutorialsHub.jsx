@@ -1,1092 +1,7 @@
 import React, { useState } from 'react';
+import { TUTORIALS } from '../data/tutorialsData';
 
-const TUTORIALS = {
-  COBOL: {
-    icon: '📦',
-    color: '#00ff41',
-    description: 'Common Business-Oriented Language — the backbone of enterprise computing.',
-    chapters: [
-      {
-        title: 'COBOL Program Structure',
-        level: 'Beginner',
-        content: `A COBOL program is divided into four main Divisions:
-
-1. **IDENTIFICATION DIVISION** — Identifies the program (name, author, etc.)
-2. **ENVIRONMENT DIVISION** — Defines the computing environment and file assignments
-3. **DATA DIVISION** — Declares all data items, files, and working storage
-4. **PROCEDURE DIVISION** — Contains the actual program logic`,
-        code: `       IDENTIFICATION DIVISION.
-       PROGRAM-ID. HELLO-WORLD.
-       AUTHOR. MAINFRAME-DEV.
-
-       ENVIRONMENT DIVISION.
-       CONFIGURATION SECTION.
-       SOURCE-COMPUTER. IBM-3090.
-
-       DATA DIVISION.
-       WORKING-STORAGE SECTION.
-       01 WS-MESSAGE         PIC X(30) VALUE 'HELLO, MAINFRAME WORLD!'.
-
-       PROCEDURE DIVISION.
-           DISPLAY WS-MESSAGE
-           STOP RUN.`
-      },
-      {
-        title: 'Data Types & PIC Clauses',
-        level: 'Beginner',
-        content: `The PICTURE (PIC) clause defines the format and size of data items:
-
-- **PIC 9(n)** — Numeric, n digits (e.g., PIC 9(5) stores up to 99999)
-- **PIC X(n)** — Alphanumeric, n characters
-- **PIC A(n)** — Alphabetic only, n characters
-- **PIC S9(n)** — Signed numeric (can be negative)
-- **PIC 9(n)V9(m)** — Decimal: n integer digits, m decimal digits
-- **PIC $9(n).99** — Edited numeric for display`,
-        code: `       DATA DIVISION.
-       WORKING-STORAGE SECTION.
-       01 WS-EMPLOYEE-REC.
-          05 WS-EMP-ID       PIC 9(6).
-          05 WS-EMP-NAME     PIC X(30).
-          05 WS-EMP-SALARY   PIC S9(7)V99 COMP-3.
-          05 WS-EMP-DEPT     PIC X(4).
-          05 WS-HIRE-DATE    PIC 9(8).
-
-       01 WS-DISPLAY-SALARY  PIC $ZZZ,ZZ9.99.`
-      },
-      {
-        title: 'COBOL Verbs & Control Flow',
-        level: 'Beginner',
-        content: `Key COBOL procedural verbs:
-
-- **MOVE** — Assigns values between data items
-- **ADD / SUBTRACT / MULTIPLY / DIVIDE** — Arithmetic operations
-- **COMPUTE** — Complex arithmetic expressions
-- **IF / ELSE / END-IF** — Conditional logic
-- **PERFORM** — Loop execution (UNTIL, TIMES, THRU)
-- **EVALUATE** — Switch/case equivalent
-- **GO TO** — Branch (use sparingly)`,
-        code: `       PROCEDURE DIVISION.
-       MAIN-LOGIC.
-           MOVE 0 TO WS-TOTAL
-           PERFORM VARYING WS-IDX FROM 1 BY 1
-               UNTIL WS-IDX > 10
-               ADD WS-IDX TO WS-TOTAL
-           END-PERFORM
-
-           EVALUATE TRUE
-               WHEN WS-TOTAL > 50
-                   DISPLAY 'SUM IS LARGE'
-               WHEN WS-TOTAL > 25
-                   DISPLAY 'SUM IS MEDIUM'
-               WHEN OTHER
-                   DISPLAY 'SUM IS SMALL'
-           END-EVALUATE
-
-           STOP RUN.`
-      },
-      {
-        title: 'File Handling in COBOL',
-        level: 'Intermediate',
-        content: `COBOL file handling uses three components:
-
-1. **SELECT statement** (ENVIRONMENT DIVISION) — Maps logical to physical file
-2. **FD statement** (DATA DIVISION) — Defines file record structure
-3. **OPEN/READ/WRITE/CLOSE verbs** (PROCEDURE DIVISION) — File operations
-
-File organizations: SEQUENTIAL, INDEXED (VSAM KSDS), RELATIVE (VSAM RRDS)`,
-        code: `       ENVIRONMENT DIVISION.
-       INPUT-OUTPUT SECTION.
-       FILE-CONTROL.
-           SELECT EMPLOYEE-FILE ASSIGN TO EMPFILE
-               ORGANIZATION IS SEQUENTIAL
-               ACCESS MODE IS SEQUENTIAL
-               FILE STATUS IS WS-FILE-STATUS.
-
-       DATA DIVISION.
-       FILE SECTION.
-       FD  EMPLOYEE-FILE.
-       01  EMPLOYEE-RECORD.
-           05  EMP-ID       PIC 9(6).
-           05  EMP-NAME     PIC X(30).
-           05  EMP-SALARY   PIC S9(7)V99 COMP-3.
-
-       PROCEDURE DIVISION.
-           OPEN INPUT EMPLOYEE-FILE
-           PERFORM UNTIL WS-EOF = 'Y'
-               READ EMPLOYEE-FILE
-                   AT END MOVE 'Y' TO WS-EOF
-                   NOT AT END PERFORM PROCESS-RECORD
-               END-READ
-           END-PERFORM
-           CLOSE EMPLOYEE-FILE
-           STOP RUN.`
-      },
-      {
-        title: 'COBOL Copybooks & Modularity',
-        level: 'Intermediate',
-        content: `Copybooks are reusable data definitions stored in libraries:
-
-- Defined with **COPY** statement
-- Stored in PDS (Partitioned Data Set) libraries
-- Can be replaced/modified using **REPLACING** clause
-- Promote consistent record layouts across programs
-- Think of them as "header files" in C or "modules" in Java`,
-        code: `       * In copybook member: EMPREC
-       01  EMPLOYEE-RECORD.
-           05  EMP-ID       PIC 9(6).
-           05  EMP-NAME     PIC X(30).
-           05  EMP-DEPT     PIC X(4).
-
-       * In main program:
-       DATA DIVISION.
-       WORKING-STORAGE SECTION.
-           COPY EMPREC.
-
-       * With REPLACING:
-           COPY EMPREC REPLACING ==EMPLOYEE== BY ==MANAGER==.`
-      },
-      {
-        title: 'DB2 Embedded SQL in COBOL',
-        level: 'Advanced',
-        content: `COBOL programs access DB2 tables using Embedded SQL:
-
-- SQL statements enclosed in **EXEC SQL ... END-EXEC**
-- **SQLCA** (SQL Communication Area) — check SQLCODE after each SQL call
-- **SQLCODE = 0** → Success
-- **SQLCODE = 100** → Not Found (no rows)
-- **SQLCODE < 0** → Error
-- Host variables prefixed with colon (:WS-EMP-ID)`,
-        code: `       DATA DIVISION.
-       WORKING-STORAGE SECTION.
-           EXEC SQL INCLUDE SQLCA END-EXEC.
-       01  WS-EMP-ID    PIC 9(6).
-       01  WS-EMP-NAME  PIC X(30).
-       01  WS-SALARY    PIC S9(7)V99 COMP-3.
-
-       PROCEDURE DIVISION.
-           MOVE 100234 TO WS-EMP-ID
-
-           EXEC SQL
-               SELECT EMP_NAME, SALARY
-               INTO :WS-EMP-NAME, :WS-SALARY
-               FROM EMPLOYEE
-               WHERE EMP_ID = :WS-EMP-ID
-           END-EXEC
-
-           EVALUATE SQLCODE
-               WHEN 0
-                   DISPLAY 'FOUND: ' WS-EMP-NAME
-               WHEN 100
-                   DISPLAY 'EMPLOYEE NOT FOUND'
-               WHEN OTHER
-                   DISPLAY 'SQL ERROR: ' SQLCODE
-                   PERFORM ERROR-HANDLER
-           END-EVALUATE.`
-      }
-    ]
-  },
-  JCL: {
-    icon: '⚙️',
-    color: '#ffaa00',
-    description: 'Job Control Language — the scripting language of IBM mainframe batch processing.',
-    chapters: [
-      {
-        title: 'JCL Fundamentals',
-        level: 'Beginner',
-        content: `JCL (Job Control Language) controls batch job execution on IBM mainframes.
-
-**Three main statement types:**
-- **JOB statement** — Identifies and names the job, sets accounting/priority
-- **EXEC statement** — Identifies the program or procedure to execute
-- **DD statement** — Defines the datasets (files) used by the program
-
-Every JCL statement starts with **//** in columns 1-2.`,
-        code: `//MYJOB    JOB (ACCT001),'MY JOB',
-//             CLASS=A,
-//             MSGCLASS=X,
-//             NOTIFY=&SYSUID,
-//             REGION=4M
-//*
-//* THIS IS A COMMENT
-//*
-//STEP01   EXEC PGM=MYPROG
-//INFILE   DD DSN=MY.INPUT.FILE,
-//             DISP=SHR
-//OUTFILE  DD DSN=MY.OUTPUT.FILE,
-//             DISP=(NEW,CATLG,DELETE),
-//             SPACE=(CYL,(5,2),RLSE),
-//             DCB=(RECFM=FB,LRECL=80,BLKSIZE=8000)
-//SYSPRINT DD SYSOUT=*
-//SYSIN    DD *
-  SOME INLINE DATA
-/*`
-      },
-      {
-        title: 'Dataset Disposition (DISP)',
-        level: 'Beginner',
-        content: `DISP parameter has three sub-parameters: DISP=(status, normal-end, abnormal-end)
-
-**Status options:**
-- **NEW** — Create new dataset
-- **OLD** — Existing dataset, exclusive use
-- **SHR** — Existing dataset, shared use
-- **MOD** — Append to existing dataset
-
-**End-of-step options:**
-- **KEEP** — Retain dataset
-- **DELETE** — Remove dataset
-- **CATLG** — Catalog the dataset
-- **UNCATLG** — Remove from catalog
-- **PASS** — Pass to next step`,
-        code: `//STEP1    EXEC PGM=PROG1
-//* Create new, catalog if OK, delete if ABEND
-//NEWDS    DD DSN=MY.NEW.FILE,
-//             DISP=(NEW,CATLG,DELETE),
-//             SPACE=(TRK,(10,5))
-
-//STEP2    EXEC PGM=PROG2
-//* Use existing file shared (read-only safe)
-//INFILE   DD DSN=MY.EXISTING.FILE,
-//             DISP=SHR
-
-//STEP3    EXEC PGM=PROG3
-//* Append to existing sequential file
-//APPENDF  DD DSN=MY.APPEND.FILE,
-//             DISP=(MOD,KEEP,KEEP)`
-      },
-      {
-        title: 'DFSORT — Sorting and Merging',
-        level: 'Intermediate',
-        content: `DFSORT (IBM Data Facility Sort) is the most powerful mainframe sort utility.
-
-**Key control statements:**
-- **SORT FIELDS** — Define sort keys (position, length, format, order)
-- **MERGE FIELDS** — Merge pre-sorted files
-- **INCLUDE COND** — Include only matching records
-- **OMIT COND** — Exclude matching records
-- **OUTREC / INREC** — Reformat output/input records
-- **SUM FIELDS** — Aggregate (sum) numeric fields
-- **OUTFIL** — Multiple output files from one pass`,
-        code: `//SORTJOB  JOB ...
-//STEP1    EXEC PGM=SORT
-//SORTIN   DD DSN=MY.INPUT.FILE,DISP=SHR
-//SORTOUT  DD DSN=MY.SORTED.FILE,
-//             DISP=(NEW,CATLG,DELETE),
-//             SPACE=(CYL,(5,2))
-//SYSOUT   DD SYSOUT=*
-//SYSIN    DD *
-  SORT FIELDS=(1,4,CH,A,5,30,CH,A)
-  INCLUDE COND=(45,3,CH,EQ,C'MGR')
-  OUTREC FIELDS=(1,30,35,10)
-/*
-//*
-//* Find max salary: sort descending, take first record
-//STEP2    EXEC PGM=SORT
-//SORTIN   DD DSN=EMP.DATA,DISP=SHR
-//SORTOUT  DD DSN=EMP.MAXSAL,DISP=(NEW,CATLG,DELETE)
-//SYSIN    DD *
-  SORT FIELDS=(50,8,ZD,D)
-  OUTREC FIELDS=(1,80)
-  OUTFIL STARTREC=1,ENDREC=1
-/*`
-      },
-      {
-        title: 'IEBGENER — Copy & Reformat',
-        level: 'Intermediate',
-        content: `IEBGENER is a utility program for copying and reformatting sequential datasets.
-
-**Common uses:**
-- Copy one sequential file to another
-- Print datasets to SYSOUT
-- Create multiple copies of a file
-- Reformat records using SYSIN control statements
-
-When SYSIN is DD DUMMY, it does a straight copy with no reformatting.`,
-        code: `//COPYJOB  JOB ...
-//STEP1    EXEC PGM=IEBGENER
-//SYSPRINT DD SYSOUT=*
-//* Source file
-//SYSUT1   DD DSN=MY.SOURCE.FILE,DISP=SHR
-//* Destination file
-//SYSUT2   DD DSN=MY.DEST.FILE,
-//             DISP=(NEW,CATLG,DELETE),
-//             SPACE=(CYL,(1,1))
-//* No special control cards = straight copy
-//SYSIN    DD DUMMY
-
-//STEP2    EXEC PGM=IEBGENER
-//SYSPRINT DD SYSOUT=*
-//SYSUT1   DD DSN=MY.DATA.FILE,DISP=SHR
-//* Print file to system output
-//SYSUT2   DD SYSOUT=*
-//SYSIN    DD DUMMY`
-      },
-      {
-        title: 'Procedures (PROCs)',
-        level: 'Advanced',
-        content: `JCL Procedures (PROCs) are reusable sets of JCL statements stored in a library.
-
-**Types:**
-- **Instream PROC** — Defined within the JCL itself
-- **Cataloged PROC** — Stored in a PROCLIB (PDS)
-
-**Benefits:**
-- Eliminate repetition
-- Standardize job structures
-- Support symbolic parameters (&&PARM)
-- Can be overridden at execution time (override DD statements)`,
-        code: `//MYPROC   PROC INDSN=MY.DEFAULT.IN,
-//              OUTDSN=MY.DEFAULT.OUT
-//*
-//STEP1    EXEC PGM=MYPROG
-//INPUT    DD DSN=&INDSN,DISP=SHR
-//OUTPUT   DD DSN=&OUTDSN,
-//             DISP=(NEW,CATLG,DELETE),
-//             SPACE=(CYL,(5,2))
-//SYSPRINT DD SYSOUT=*
-//         PEND
-//*
-//* Calling the PROC with override
-//JOBSTEP  EXEC MYPROC,
-//              INDSN=MY.ACTUAL.INPUT,
-//              OUTDSN=MY.ACTUAL.OUTPUT
-//* Override a DD statement in the PROC
-//STEP1.SYSPRINT DD SYSOUT=H`
-      }
-    ]
-  },
-  DB2: {
-    icon: '🗄️',
-    color: '#00aaff',
-    description: 'IBM Db2 — the relational database management system for z/OS.',
-    chapters: [
-      {
-        title: 'DB2 Architecture on z/OS',
-        level: 'Beginner',
-        content: `DB2 for z/OS has a unique multi-layer architecture:
-
-- **DB2 Subsystem** — One or more DB2 instances per z/OS LPAR
-- **Buffer Pools** — Memory areas for caching pages from disk
-- **Log** — Active log and archive logs for recovery
-- **VSAM datasets** — Underlying storage for table spaces
-- **DBD** — Database Descriptor (metadata)
-- **ICF Catalog** — Integrated Catalog Facility for VSAM
-- **DB2 Catalog** — DB2's own system catalog (SYSIBM tables)`,
-        code: `-- View DB2 catalog tables
-SELECT NAME, CREATOR, TYPE
-FROM SYSIBM.SYSTABLES
-WHERE TYPE = 'T'
-AND CREATOR = 'MYSCHEMA'
-ORDER BY NAME;
-
--- Check table statistics
-SELECT TABLENAME, CARDINALITY, NPAGES, PAGESAVE
-FROM SYSIBM.SYSTABLESTAT
-WHERE TABLESCHEMA = 'MYSCHEMA';`
-      },
-      {
-        title: 'DB2 Data Types',
-        level: 'Beginner',
-        content: `DB2 for z/OS data types:
-
-**Numeric:** INTEGER, SMALLINT, BIGINT, DECIMAL(p,s), FLOAT, DOUBLE
-**Character:** CHAR(n), VARCHAR(n), CLOB(n)
-**Binary:** BINARY(n), VARBINARY(n), BLOB(n)
-**Date/Time:** DATE, TIME, TIMESTAMP
-**Large Objects:** CLOB, BLOB, DBCLOB (double-byte characters)
-**XML:** XML (native XML storage)`,
-        code: `CREATE TABLE EMPLOYEE (
-    EMP_ID      INTEGER       NOT NULL,
-    EMP_NAME    VARCHAR(50)   NOT NULL,
-    DEPT_NO     CHAR(3),
-    HIRE_DATE   DATE          DEFAULT CURRENT DATE,
-    SALARY      DECIMAL(10,2),
-    BONUS_PCT   SMALLINT      DEFAULT 0,
-    PHOTO       BLOB(1M),
-    NOTES       CLOB(32K),
-    LAST_UPD    TIMESTAMP     DEFAULT CURRENT TIMESTAMP,
-    PRIMARY KEY (EMP_ID)
-);`
-      },
-      {
-        title: 'SQL Queries — SELECT & JOINs',
-        level: 'Beginner',
-        content: `Core SELECT patterns used in DB2 interviews:
-
-- **Basic SELECT** — Retrieve data with WHERE, ORDER BY
-- **INNER JOIN** — Rows matching in both tables
-- **LEFT OUTER JOIN** — All rows from left, matching from right
-- **GROUP BY + HAVING** — Aggregation with filter
-- **Subquery** — Nested SELECT
-- **MAX salary pattern** — Common interview question!`,
-        code: `-- Basic select with filter
-SELECT EMP_NAME, SALARY, DEPT_NO
-FROM EMPLOYEE
-WHERE SALARY > 50000
-ORDER BY SALARY DESC;
-
--- INNER JOIN departments
-SELECT E.EMP_NAME, D.DEPT_NAME, E.SALARY
-FROM EMPLOYEE E
-INNER JOIN DEPARTMENT D ON E.DEPT_NO = D.DEPT_NO
-WHERE D.LOCATION = 'NEW YORK';
-
--- MAX salary per department
-SELECT DEPT_NO, MAX(SALARY) AS MAX_SAL
-FROM EMPLOYEE
-GROUP BY DEPT_NO
-HAVING MAX(SALARY) > 80000;
-
--- Second highest salary
-SELECT MAX(SALARY) AS SECOND_MAX
-FROM EMPLOYEE
-WHERE SALARY < (SELECT MAX(SALARY) FROM EMPLOYEE);
-
--- Second highest using RANK()
-SELECT SALARY FROM (
-    SELECT SALARY, RANK() OVER (ORDER BY SALARY DESC) AS RNK
-    FROM EMPLOYEE
-) WHERE RNK = 2;`
-      },
-      {
-        title: 'DB2 Indexes & Performance',
-        level: 'Intermediate',
-        content: `Indexes are critical for DB2 performance:
-
-- **Unique Index** — Enforces uniqueness (like PRIMARY KEY)
-- **Non-unique Index** — For query performance only
-- **Clustering Index** — Physically orders table pages
-- **Partitioned Index** — For range partitioned table spaces
-- **Access Path** — EXPLAIN to see how DB2 accesses data
-
-**RUNSTATS** — Updates catalog statistics for optimizer
-**REORG** — Physically reorganizes data for clustering`,
-        code: `-- Create clustering index
-CREATE UNIQUE INDEX EMP_IDX
-    ON EMPLOYEE (EMP_ID ASC)
-    CLUSTER;
-
--- Create composite index for query pattern
-CREATE INDEX EMP_DEPT_SAL_IDX
-    ON EMPLOYEE (DEPT_NO, SALARY DESC);
-
--- EXPLAIN an access path
-EXPLAIN PLAN SET QUERYNO = 1 FOR
-    SELECT EMP_NAME, SALARY
-    FROM EMPLOYEE
-    WHERE DEPT_NO = 'D01'
-    AND SALARY > 60000;
-
--- Check explain output
-SELECT * FROM PLAN_TABLE
-WHERE QUERYNO = 1;`
-      },
-      {
-        title: 'DB2 Stored Procedures & Functions',
-        level: 'Advanced',
-        content: `DB2 supports both SQL stored procedures and external (compiled language) procedures.
-
-**SQL Stored Procedure:** Written in SQL PL dialect
-**External Stored Procedure:** Written in COBOL, C, PL/I, compiled separately
-**UDF (User Defined Function):** Scalar or table functions
-**Triggers:** Automatic actions on INSERT/UPDATE/DELETE`,
-        code: `-- SQL Stored Procedure
-CREATE PROCEDURE GET_EMP_DETAILS
-    (IN P_EMP_ID   INTEGER,
-     OUT P_NAME    VARCHAR(50),
-     OUT P_SALARY  DECIMAL(10,2))
-LANGUAGE SQL
-BEGIN
-    SELECT EMP_NAME, SALARY
-    INTO P_NAME, P_SALARY
-    FROM EMPLOYEE
-    WHERE EMP_ID = P_EMP_ID;
-END;
-
--- Call the procedure
-CALL GET_EMP_DETAILS(12345, ?, ?);
-
--- Table UDF
-CREATE FUNCTION DEPT_EMPLOYEES(P_DEPT CHAR(3))
-RETURNS TABLE (EMP_ID INT, EMP_NAME VARCHAR(50))
-LANGUAGE SQL
-READS SQL DATA
-RETURN
-    SELECT EMP_ID, EMP_NAME
-    FROM EMPLOYEE
-    WHERE DEPT_NO = P_DEPT;`
-      }
-    ]
-  },
-  CICS: {
-    icon: '🖥️',
-    color: '#ff6b35',
-    description: 'Customer Information Control System — the mainframe transaction processing engine.',
-    chapters: [
-      {
-        title: 'CICS Architecture Overview',
-        level: 'Beginner',
-        content: `CICS is a transaction server that processes millions of transactions per day in banking, insurance, and retail.
-
-**Key concepts:**
-- **Region** — CICS address space (one or more per LPAR)
-- **Transaction** — A 4-character code identifying a unit of work
-- **Task** — Instance of a transaction being executed
-- **Terminal** — Physical or logical device (3270 screen)
-- **Program** — COBOL/PL/I/C code executing under CICS
-- **CSD** — CICS System Definition file (resource definitions)
-- **Pseudo-conversational** — CICS's preferred design pattern`,
-        code: `*Typical CICS transaction flow:
-* 1. User types TXID on 3270 terminal → ENTER
-* 2. CICS routes to program linked to TXID
-* 3. Program reads COMMAREA / TWA
-* 4. Program accesses DB2/VSAM/MQ
-* 5. Program sends map back to terminal
-* 6. Program issues EXEC CICS RETURN TRANSID(TXID)
-* 7. Terminal waits (task ends, no system resources held)
-* 8. User fills screen → ENTER
-* 9. New task starts, COMMAREA re-read`
-      },
-      {
-        title: 'EXEC CICS Commands',
-        level: 'Beginner',
-        content: `CICS commands use the EXEC CICS interface (translated by CICS preprocessor).
-
-**Program control:**
-- EXEC CICS RETURN — End task (pseudo-conversational)
-- EXEC CICS LINK — Call subprogram synchronously
-- EXEC CICS XCTL — Transfer control to another program
-
-**Terminal I/O:**
-- EXEC CICS SEND MAP — Send BMS map to terminal
-- EXEC CICS RECEIVE MAP — Receive data from terminal
-
-**Data storage:**
-- EXEC CICS GETMAIN — Allocate dynamic memory
-- EXEC CICS PUT CONTAINER — Store data in channel/container`,
-        code: `       PROCEDURE DIVISION.
-       MAIN-PARA.
-           EXEC CICS HANDLE CONDITION
-               ERROR(ERROR-PARA)
-               NOTFOUND(NOTFOUND-PARA)
-           END-EXEC
-
-           EXEC CICS RECEIVE MAP('MYMAPNM')
-               MAPSET('MYMAPST')
-               INTO(MY-MAP-AREA)
-           END-EXEC
-
-           EXEC CICS READ
-               FILE('CUSTOMER')
-               INTO(CUST-REC)
-               RIDFLD(CUST-KEY)
-               RESP(WS-RESPONSE)
-           END-EXEC
-
-           IF WS-RESPONSE = DFHRESP(NORMAL)
-               EXEC CICS SEND MAP('MYMAPNM')
-                   MAPSET('MYMAPST')
-                   FROM(OUTPUT-MAP)
-                   ERASE
-               END-EXEC
-           END-IF
-
-           EXEC CICS RETURN
-               TRANSID('MYT1')
-               COMMAREA(WS-COMMAREA)
-               LENGTH(LENGTH OF WS-COMMAREA)
-           END-EXEC.`
-      },
-      {
-        title: 'BMS Maps (Basic Mapping Support)',
-        level: 'Intermediate',
-        content: `BMS maps define the layout of 3270 screens using assembler macro definitions.
-
-**DFHMSD** — Map Set definition
-**DFHMDI** — Map definition (one screen)
-**DFHMDF** — Map field definition (one field on screen)
-
-Maps are assembled and link-edited into a load library. CICS uses them to format/deformat 3270 datastreams automatically.`,
-        code: `MYMAPST  DFHMSD TYPE=&SYSPARM,                     X
-               LANG=COBOL,MODE=INOUT,TERM=3270-2,     X
-               CTRL=FREEKB,STORAGE=AUTO
-MYMAPNM  DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
-*
-* Title field
-TITLE    DFHMDF POS=(1,20),LENGTH=40,                 X
-               ATTRB=(PROT,BRT),                       X
-               INITIAL='CUSTOMER INQUIRY SCREEN'
-* Input field - Customer ID
-CUSTID   DFHMDF POS=(5,10),LENGTH=8,                  X
-               ATTRB=(UNPROT,IC),                      X
-               PICIN='99999999'
-*
-CUSTIDL  EQU   *
-* Output fields
-CUSTNAME DFHMDF POS=(7,10),LENGTH=30,                 X
-               ATTRB=(PROT,NORM)
-         DFHMSD TYPE=FINAL
-         END`
-      }
-    ]
-  },
-  VSAM: {
-    icon: '💾',
-    color: '#9b59b6',
-    description: 'Virtual Storage Access Method — IBM\'s primary file management system.',
-    chapters: [
-      {
-        title: 'VSAM Dataset Types',
-        level: 'Beginner',
-        content: `VSAM has four main dataset organizations:
-
-1. **KSDS (Key-Sequenced Data Set)** — Keyed access; records sorted by key
-   - Has index component and data component
-   - Supports sequential, keyed, and skip-sequential access
-   
-2. **ESDS (Entry-Sequenced Data Set)** — Records stored in arrival order
-   - Accessed by RBA (Relative Byte Address)
-   - Used as CICS VSAM logs, IMS overflow
-
-3. **RRDS (Relative Record Data Set)** — Fixed-length records accessed by relative record number
-   - Like arrays; fast direct access by slot number
-
-4. **LDS (Linear Data Set)** — No records; just contiguous bytes
-   - Used for Hiperspace, coupling facility buffers`,
-        code: `//DEFKSDS  EXEC PGM=IDCAMS
-//SYSPRINT DD SYSOUT=*
-//SYSIN    DD *
-  DEFINE CLUSTER -
-    (NAME(MY.EMPLOYEE.KSDS) -
-     INDEXED -
-     KEYS(6 0) -
-     RECORDSIZE(100 200) -
-     TRACKS(10 5) -
-     SHAREOPTIONS(1 3)) -
-  DATA -
-    (NAME(MY.EMPLOYEE.KSDS.DATA)) -
-  INDEX -
-    (NAME(MY.EMPLOYEE.KSDS.INDEX))
-/*`
-      },
-      {
-        title: 'VSAM IDCAMS Utility',
-        level: 'Intermediate',
-        content: `IDCAMS (Access Method Services) is the utility for managing VSAM files.
-
-**Common IDCAMS commands:**
-- **DEFINE CLUSTER** — Create VSAM file
-- **DELETE** — Delete VSAM file
-- **LISTCAT** — List catalog entries
-- **REPRO** — Copy/load records between datasets
-- **PRINT** — Print VSAM contents
-- **ALTER** — Change VSAM attributes
-- **VERIFY** — Fix improperly closed datasets`,
-        code: `//VSAMINIT EXEC PGM=IDCAMS
-//SYSPRINT DD SYSOUT=*
-//INFILE   DD DSN=MY.SEQ.INPUT,DISP=SHR
-//SYSIN    DD *
-* Delete and redefine
-  DELETE MY.VSAM.KSDS CLUSTER PURGE
-
-  DEFINE CLUSTER -
-    (NAME(MY.VSAM.KSDS) -
-     INDEXED -
-     KEYS(8 0) -
-     RECORDSIZE(200 500) -
-     CYLINDERS(5 2) -
-     FREESPACE(10 10)) -
-  DATA(NAME(MY.VSAM.KSDS.DATA)) -
-  INDEX(NAME(MY.VSAM.KSDS.INDEX))
-
-* Load data from sequential file
-  REPRO INFILE(INFILE) -
-        OUTDATASET(MY.VSAM.KSDS)
-
-* List the catalog entry
-  LISTCAT ENTRIES(MY.VSAM.KSDS) ALL
-/*`
-      }
-    ]
-  },
-  REXX: {
-    icon: '🔧',
-    color: '#e74c3c',
-    description: 'Restructured Extended Executor — the mainframe scripting and automation language.',
-    chapters: [
-      {
-        title: 'REXX Basics',
-        level: 'Beginner',
-        content: `REXX is a versatile scripting language available on z/OS, CMS, and TSO/ISPF.
-
-**Key features:**
-- No data types — everything is character or numeric automatically
-- Excellent string manipulation built-in
-- Interfaces with TSO, ISPF, RACF, JES
-- Can invoke REXX execs from JCL (via IRXJCL)
-- Commonly used for: automation, ISPF panels, system utilities`,
-        code: `/* REXX */
-/* Basic REXX program */
-say 'Hello from REXX!'
-
-/* Variables */
-name = 'MAINFRAME'
-count = 42
-pi = 3.14159
-
-/* String operations */
-full = 'IBM' name
-say 'Full:' full
-say 'Length:' length(full)
-say 'Upper:' translate(name)
-say 'Substr:' substr(full, 1, 3)
-
-/* Arithmetic */
-result = count * 2 + 10
-say 'Result:' result
-
-/* DO loop */
-do i = 1 to 5
-  say 'Loop iteration:' i
-end`
-      },
-      {
-        title: 'REXX TSO Interface',
-        level: 'Intermediate',
-        content: `REXX can execute TSO commands, allocate files, and invoke ISPF services.
-
-- **ADDRESS TSO** — Send command to TSO environment
-- **OUTTRAP** — Capture TSO command output into a stem variable
-- **LISTDSI** — Get dataset information
-- **SYSDSN** — Check if dataset exists
-- **ISPEXEC** — ISPF services from REXX`,
-        code: `/* REXX - TSO interface example */
-
-/* Check if dataset exists */
-dsn = "'MY.DATASET.NAME'"
-rc = SYSDSN(dsn)
-if rc = 'OK' then
-  say 'Dataset exists!'
-else
-  say 'Dataset not found:' rc
-
-/* Get dataset info */
-rc = LISTDSI(dsn)
-say 'RECFM  :' SYSRECFM
-say 'LRECL  :' SYSLRECL
-say 'BLKSIZE:' SYSBLKSIZE
-say 'TRACKS :' SYSUSED
-
-/* Capture TSO LISTDS output */
-rc = OUTTRAP('out.')
-'LISTDS' dsn 'STATUS'
-rc = OUTTRAP('OFF')
-do i = 1 to out.0
-  say out.i
-end`
-      }
-    ]
-  },
-  zOS: {
-    icon: '🏢',
-    color: '#00ff66',
-    description: 'z/OS operating system fundamentals — addressing, storage structures, and dataset catalogs.',
-    chapters: [
-      {
-        title: 'Virtual Storage & Address Spaces',
-        level: 'Beginner',
-        content: `z/OS is a virtual-storage operating system that allocates up to 16 Exabytes of virtual address space (64-bit addressing).
-Each active job, subsystem (CICS, DB2), or terminal user runs within its own private address space.
-Address space divisions:
-1. **Common Area** — Shared by all address spaces (contains nucleuses, systems functions).
-2. **Private Area** — Dedicated user program code and working storage execution.
-3. **Above and Below the Bar** — Address bounds distinguishing 24-bit (16MB), 31-bit (2GB), and 64-bit (16EB) execution regions.`,
-        code: `* z/OS Virtual Address Space Architecture Layout (Concept):
-* 
-* [ 16 EB ]   ===============================================
-*             |                                             |
-*             |           Above the Bar (64-bit)            |
-*             |       Main program objects & buffers        |
-*             |                                             |
-* [  2 GB ]   ================== THE BAR ===================
-*             |                                             |
-*             |           Above the Line (31-bit)           |
-*             |       Extended Private & Common areas       |
-*             |                                             |
-* [ 16 MB ]   ================== THE LINE ==================
-*             |           Below the Line (24-bit)           |
-*             |      Legacy 24-bit programs & buffers       |
-* [   0   ]   ===============================================`
-      },
-      {
-        title: 'Catalog Management & Datasets',
-        level: 'Beginner',
-        content: `z/OS uses a catalog structure to find datasets (files) without needing physical disk unit or volume IDs.
-- **Master Catalog** — Main system catalog containing pointers to user catalogs and system high-level qualifiers (HLQ).
-- **User Catalog** — Stores references to application datasets.
-- **Alias** — Defines which high-level qualifier maps to which user catalog.
-- **PDS vs PDSE** — Partitioned Datasets (libraries) where PDS requires periodic compression (IEBCOPY compress) to reclaim deleted member slots, and PDSE manages directory allocations dynamically.`,
-        code: `//ALLOCATE JOB (MGMT),'ALLOCATE DS',CLASS=A,MSGCLASS=X
-//STEP1    EXEC PGM=IEFBR14
-//* Allocate a cataloged Partitioned Dataset Extended (PDSE)
-//NEWLIB   DD DSN=PROD.APPL.LOADLIB,
-//            DISP=(NEW,CATLG,DELETE),
-//            UNIT=SYSDA,
-//            VOL=SER=PRD101,
-//            SPACE=(CYL,(15,5,10)),
-//            DSNTYPE=LIBRARY,
-//            DCB=(RECFM=U,LRECL=0,BLKSIZE=6144,DSORG=PO)`
-      }
-    ]
-  },
-  RACF: {
-    icon: '🔒',
-    color: '#ff4444',
-    description: 'Resource Access Control Facility — the central security subsystem for z/OS.',
-    chapters: [
-      {
-        title: 'RACF Profiles & Datasets',
-        level: 'Intermediate',
-        content: `RACF protects mainframe resources using two profile types:
-1. **Discrete Profiles** — Protect a single resource (e.g. a specific file).
-2. **Generic Profiles** — Protect multiple files using wildcard patterns (* or **).
-Access Authorities (ascending hierarchy):
-- **NONE** — Prevents any access.
-- **READ** — Read-only access (no modifications).
-- **UPDATE** — Read and write access (modify, append, edit records).
-- **CONTROL** — Read/write access plus control interval modifications (VSAM).
-- **ALTER** — Full control: read, write, delete, and alter the resource security profile.`,
-        code: `/* TSO RACF Commands to protect application datasets */
-
-/* 1. Define a generic profile for payroll datasets */
-ADDSD 'PROD.PAYROLL.**' UACC(NONE) OWNER(SECADMIN)
-
-/* 2. Permit update access to the payroll system group */
-PERMIT 'PROD.PAYROLL.**' ACCESS(UPDATE) ID(PAYGROUP)
-
-/* 3. Refresh the dataset profile definitions in memory */
-SETROPTS GENERIC(DATASET) REFRESH`
-      },
-      {
-        title: 'General Resource Classes',
-        level: 'Advanced',
-        content: `General resources (CICS transactions, MQ queues, console commands, DB2 packages) are secured using resource classes.
-- Classes are defined in the Class Descriptor Table (CDT).
-- Examples: TCICSTRN (CICS transactions), MQQUEUE (MQ Series queues), OPERCMDS (Operator commands).
-- Profiles in generic classes are loaded into memory pools (data spaces) for high-performance authentication.`,
-        code: `/* TSO RACF Commands for General Resources */
-
-/* 1. Protect CICS transaction PAY1 */
-RDEFINE TCICSTRN PAY1 UACC(NONE) AUDIT(ALL)
-
-/* 2. Permit specific user access */
-PERMIT PAY1 CLASS(TCICSTRN) ID(PAYCLERK) ACCESS(READ)
-
-/* 3. Refresh transaction profiles in virtual storage */
-SETROPTS RACLIST(TCICSTRN) REFRESH`
-      }
-    ]
-  },
-  TSO: {
-    icon: '📟',
-    color: '#ffaa00',
-    description: 'Time Sharing Option & Interactive System Productivity Facility — command terminal and panels.',
-    chapters: [
-      {
-        title: 'TSO Commands & Environment',
-        level: 'Beginner',
-        content: `TSO provides command-line interaction on z/OS terminals.
-Common system commands:
-- **ALLOCATE (ALLOC)** — Allocates a dataset to a logical JCL DD name equivalent.
-- **FREE** — Deallocates and releases files or logical DD names.
-- **LISTDS** — Lists file dataset attributes (RECFM, LRECL, blocks).
-- **SEND** — Transmits message notifications to logged-on users.
-- **PROFILE** — Configures prompt alerts, terminal prefix names, and command configurations.`,
-        code: `/* Examples of interactive TSO Commands */
-
-/* Allocate a sequential customer dataset to INDD file handle */
-ALLOCATE FILE(INDD) DATASET('PROD.CUSTOMER.SEQ') SHR
-
-/* Display file dataset allocation properties */
-LISTDS 'PROD.CUSTOMER.SEQ'
-
-/* Release file handle and free allocations */
-FREE FILE(INDD)
-
-/* Notify a developer terminal user */
-SEND 'System backup starting in 5 minutes. Please logoff.' USER(DEV01)`
-      },
-      {
-        title: 'ISPF Panel Interfaces & Dialogs',
-        level: 'Intermediate',
-        content: `ISPF (Interactive System Productivity Facility) provides full-screen menu panel dialogs.
-REXX scripts or programs can interact with ISPF panels using Dialog Services:
-- **ISPEXEC DISPLAY** — Renders an assembler/definition panel layout on screen.
-- **ISPEXEC SELECT** — Runs an ISPF menu option, script, or program.
-- **ISPEXEC VGET / VPUT** — Reads from or writes variable states into shared/profile variable pools.`,
-        code: `/* REXX Script - Display Customer Query Panel Dialog */
-/* REXX */
-address ISPEXEC
-
-/* Display panel named CUSTPNL and capture inputs */
-"DISPLAY PANEL(CUSTPNL)"
-
-if rc = 0 then do
-   /* If user pressed enter, retrieve and display variable */
-   say "Customer lookup initiated for ID: " custid
-   
-   /* Put the variable in the shared profile pool */
-   "VPUT (CUSTID) SHARED"
-   
-   /* Call backend processing program */
-   "SELECT PGM(CBLCUST) PARM("custid")"
-end
-else do
-   say "Lookup operation aborted or user pressed PF3 (EXIT)."
-end`
-      }
-    ]
-  },
-  IMS: {
-    icon: '🧬',
-    color: '#00aaff',
-    description: 'Information Management System — high-performance hierarchical DB and transaction manager.',
-    chapters: [
-      {
-        title: 'DL/I Hierarchical Database',
-        level: 'Advanced',
-        content: `IMS DB uses a hierarchical structure where data is organized into segments (parent/child relationships).
-- **Root Segment** — The top-level segment representing the base entity.
-- **Segment Search Argument (SSA)** — String argument passed in DL/I calls to filter database queries (similar to WHERE clauses in SQL).
-- **PCB (Program Communication Block)** — Defines program access rights and view (subschema) to database segments.
-- **PSB (Program Specification Block)** — Collects all PCBs referenced by a single application program.
-DL/I Calls: GU (Get Unique), GN (Get Next), ISRT (Insert), REPL (Replace), DLET (Delete).`,
-        code: `* COBOL sample code executing hierarchical Get Unique (GU) call
-       WORKING-STORAGE SECTION.
-       01  DL-I-FUNCTIONS.
-           05  DB-GU         PIC X(4)  VALUE 'GU  '.
-       
-       01  CUST-SEGMENT-SSA.
-           05  SSA-NAME      PIC X(8)  VALUE 'CUSTSEG '.
-           05  SSA-BEG-CHAR  PIC X     VALUE '('.
-           05  SSA-KEY-FIELD PIC X(8)  VALUE 'CUSTID  '.
-           05  SSA-OPERATOR  PIC X(2)  VALUE 'EQ'.
-           05  SSA-KEY-VAL   PIC X(6)  VALUE 'C10045'.
-           05  SSA-END-CHAR  PIC X     VALUE ')'.
-
-       PROCEDURE DIVISION.
-           CALL 'CBLTDLI' USING DB-GU
-                                CUST-PCB
-                                CUST-RECORD-AREA
-                                CUST-SEGMENT-SSA.
-           
-           IF PCB-STATUS-CODE NOT = '  '
-               DISPLAY 'IMS ERROR STATUS CODE: ' PCB-STATUS-CODE
-           END-IF.`
-      },
-      {
-        title: 'IMS TM Transaction Processing',
-        level: 'Advanced',
-        content: `IMS Data Communications (DC) or Transaction Manager (TM) handles high-speed transaction requests.
-- **Message Processing Program (MPP)** — Online programs running in Message Processing Regions (MPRs) that process terminal requests.
-- **I/O PCB** — Used by MPPs to pull incoming messages from the system queue and send replies.
-- **Transaction Flow** — MPP retrieves transaction arguments via Get Unique (GU) call on I/O PCB, performs updates, and inserts (ISRT) response messages back to the terminal.`,
-        code: `* COBOL online IMS transaction message processing loop
-       PROCEDURE DIVISION.
-           * Pull transaction message from incoming queue
-           CALL 'CBLTDLI' USING TM-GU
-                                IO-PCB
-                                INPUT-MESSAGE-BUFFER.
-                                
-           PERFORM UNTIL IMS-STATUS-CODE = 'QC'
-               * QC status means transaction message queue is empty
-               PERFORM PROCESS-TRANSACTION-DATA
-               
-               * Send output message back to user terminal
-               CALL 'CBLTDLI' USING TM-ISRT
-                                    IO-PCB
-                                    OUTPUT-MESSAGE-BUFFER
-                                    
-               * Check for next message for this transaction
-               CALL 'CBLTDLI' USING TM-GN
-                                    IO-PCB
-                                    INPUT-MESSAGE-BUFFER
-           END-PERFORM.
-           
-           GOBACK.`
-      }
-    ]
-  },
-  Modernization: {
-    icon: '🚀',
-    color: '#e74c3c',
-    description: 'Mainframe Modernization — hybrid cloud integration, REST APIs, and automated DevOps.',
-    chapters: [
-      {
-        title: 'REST API Enablement (z/OS Connect)',
-        level: 'Advanced',
-        content: `Mainframe modernization involves exposing legacy code (COBOL, CICS, IMS) as standard REST APIs.
-- **z/OS Connect EE** — Exposes mainframe programs using standard REST/JSON request/response models.
-- **API Mapping** — Converts JSON schemas to binary copybook formats (EBCDIC) and maps them to CICS COMMAREA or channel/containers automatically.
-- **Integration** — Allows cloud web apps or microservices to access mainframe systems via secure HTTPS REST APIs.`,
-        code: `{
-  "swagger": "2.0",
-  "info": {
-    "title": "Mainframe Account API",
-    "description": "Exposes CICS Account query program ACCT01 via REST",
-    "version": "1.0.0"
-  },
-  "basePath": "/api/v1",
-  "paths": {
-    "/accounts/{accountId}": {
-      "get": {
-        "operationId": "getAccount",
-        "parameters": [
-          {
-            "name": "accountId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "JSON representation of COBOL Account Copybook"
-          }
-        }
-      }
-    }
-  }
-}`
-      },
-      {
-        title: 'Modern DevOps & Build Pipelines',
-        level: 'Advanced',
-        content: `DevOps modernization replaces traditional legacy mainframe library control managers (Endevor, Changeman) with modern Git ecosystems.
-- **Git** — Mainframe source files (COBOL programs, JCL cards) are stored in standard repositories.
-- **IBM Dependency-Based Build (DBB)** — A Java/Groovy API that dynamically resolves source dependencies on z/OS and executes compilations.
-- **CI/CD Pipelines** — Tools like Jenkins or GitLab CI orchestrate automatic source checkouts, compile runs via DBB, unit tests, and binary packaging.`,
-        code: `// Jenkins Pipeline calling DBB compile on z/OS (Simplified)
-node('zOS-agent') {
-   stage('Checkout Code') {
-      checkout scm
-   }
-   stage('Execute Dependency Build') {
-      /* Runs Groovy script using IBM DBB environment on z/OS */
-      sh "groovyz /var/dbb/build.groovy --workspace \${WORKSPACE} --program PAYROLL"
-   }
-   stage('Deploy to Test Region') {
-      /* Copy load modules to targeted test load library */
-      sh "cp \${WORKSPACE}/PAYROLL.load 'SYS1.TEST.LOADLIB(PAYROLL)'"
-      say "Application compiled and deployed to test address space."
-   }
-}`
-      }
-    ]
-  }
-};
-
-const CATEGORIES = ['COBOL', 'JCL', 'DB2', 'CICS', 'VSAM', 'REXX', 'zOS', 'RACF', 'TSO', 'IMS', 'Modernization'];
+const CATEGORIES = Object.keys(TUTORIALS);
 
 const LEVEL_COLORS = {
   'Beginner': '#00ff41',
@@ -1094,13 +9,17 @@ const LEVEL_COLORS = {
   'Advanced': '#ff4444'
 };
 
-export const TutorialsHub = () => {
-  const [activeCat, setActiveCat] = useState('COBOL');
+export const TutorialsHub = ({ initialCategory, clearInitialCategory }) => {
+  const [activeCat, setActiveCat] = useState(initialCategory || null);
   const [activeChapter, setActiveChapter] = useState(0);
   const [copiedCode, setCopiedCode] = useState(null);
 
-  const tutorial = TUTORIALS[activeCat];
-  const chapter = tutorial.chapters[activeChapter];
+  React.useEffect(() => {
+    if (initialCategory) {
+      setActiveCat(initialCategory);
+      setActiveChapter(0);
+    }
+  }, [initialCategory]);
 
   const copyCode = (code, idx) => {
     navigator.clipboard.writeText(code);
@@ -1119,210 +38,341 @@ export const TutorialsHub = () => {
     });
   };
 
-  return (
-    <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 140px)', overflow: 'hidden' }}>
-      {/* Category Sidebar */}
-      <div style={{
-        width: '200px',
-        minWidth: '200px',
-        background: 'rgba(0,0,0,0.3)',
-        borderRight: '1px solid var(--border-muted)',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '1rem 0',
-        gap: '0.3rem',
-        overflowY: 'auto'
-      }}>
-        <div style={{ padding: '0 1rem', marginBottom: '0.8rem', fontSize: '0.7rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', letterSpacing: '2px' }}>
-          TECHNOLOGIES
+  // --- TOPICS GRID VIEW ---
+  if (!activeCat) {
+    return (
+      <div style={{ padding: '2rem' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+            <h1 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', marginBottom: '1rem' }}>
+              Mainframe Topics
+            </h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>
+              Master the core technologies of the IBM Z ecosystem. Select a topic below to begin your journey.
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '2rem'
+          }}>
+            {CATEGORIES.map(cat => {
+              const tutorial = TUTORIALS[cat];
+              return (
+                <div
+                  key={cat}
+                  onClick={() => { setActiveCat(cat); setActiveChapter(0); }}
+                  className="metric-card"
+                  style={{
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-5px)';
+                    e.currentTarget.style.borderColor = tutorial.color;
+                    e.currentTarget.style.boxShadow = `0 10px 20px ${tutorial.color}22`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.borderColor = 'var(--border-muted)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '-20px', 
+                    right: '-20px', 
+                    fontSize: '8rem', 
+                    opacity: 0.03, 
+                    transform: 'rotate(15deg)',
+                    pointerEvents: 'none'
+                  }}>
+                    {tutorial.icon}
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{
+                      fontSize: '2rem',
+                      width: '50px',
+                      height: '50px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: `${tutorial.color}15`,
+                      borderRadius: '12px',
+                      color: tutorial.color
+                    }}>
+                      {tutorial.icon}
+                    </div>
+                    <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-mono)', margin: 0, color: 'var(--text-primary)' }}>
+                      {cat}
+                    </h2>
+                  </div>
+                  
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.5', flex: 1, marginBottom: '1.5rem' }}>
+                    {tutorial.description}
+                  </p>
+                  
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderTop: '1px solid var(--border-muted)',
+                    paddingTop: '1rem',
+                    marginTop: 'auto'
+                  }}>
+                    <span style={{ 
+                      fontSize: '0.75rem', 
+                      fontFamily: 'var(--font-mono)', 
+                      color: tutorial.color,
+                      background: `${tutorial.color}15`,
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px'
+                    }}>
+                      {tutorial.chapters.length} CHAPTERS
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      START LEARNING →
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat}
-            onClick={() => { setActiveCat(cat); setActiveChapter(0); }}
-            style={{
-              padding: '0.7rem 1rem',
-              textAlign: 'left',
-              background: activeCat === cat ? 'rgba(var(--accent-rgb), 0.15)' : 'transparent',
-              border: 'none',
-              borderLeft: activeCat === cat ? '3px solid var(--accent-color)' : '3px solid transparent',
-              color: activeCat === cat ? 'var(--text-primary)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.85rem',
-              fontWeight: activeCat === cat ? '700' : '400',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              transition: 'all 0.2s'
-            }}
-          >
-            <span>{TUTORIALS[cat].icon}</span> {cat}
-          </button>
-        ))}
+      </div>
+    );
+  }
+
+  // --- READING VIEW ---
+  const tutorial = TUTORIALS[activeCat];
+  const chapter = tutorial.chapters[activeChapter];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      
+      {/* Top Header Bar */}
+      <div style={{
+        background: 'rgba(0,0,0,0.3)',
+        borderBottom: '1px solid var(--border-muted)',
+        display: 'flex',
+        padding: '0.8rem 1.5rem',
+        alignItems: 'center',
+        gap: '1.5rem',
+        flexShrink: 0
+      }}>
+        <button
+          onClick={() => {
+            setActiveCat(null);
+            if (clearInitialCategory) clearInitialCategory();
+          }}
+          className="action-btn"
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--border-muted)',
+            padding: '0.4rem 0.8rem'
+          }}
+        >
+          ← BACK TO TOPICS
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <span style={{ fontSize: '1.5rem' }}>{tutorial.icon}</span>
+          <div>
+            <div style={{ fontSize: '1.1rem', fontWeight: '700', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+              {activeCat}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              {tutorial.chapters.length} Chapters available
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Chapter List */}
-      <div style={{
-        width: '230px',
-        minWidth: '230px',
-        background: 'rgba(0,0,0,0.2)',
-        borderRight: '1px solid var(--border-muted)',
-        overflowY: 'auto',
-        padding: '1rem 0'
-      }}>
-        <div style={{ padding: '0 1rem', marginBottom: '0.8rem' }}>
-          <div style={{ fontSize: '1.1rem', fontWeight: '700', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            {tutorial.icon} {activeCat}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.3rem', lineHeight: '1.4' }}>
-            {tutorial.description}
-          </div>
-        </div>
-        <div style={{ borderTop: '1px solid var(--border-muted)', paddingTop: '0.8rem' }}>
-          <div style={{ padding: '0 1rem', marginBottom: '0.5rem', fontSize: '0.7rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', letterSpacing: '2px' }}>
-            CHAPTERS
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Chapter List Sidebar */}
+        <div style={{
+          width: '280px',
+          minWidth: '280px',
+          background: 'rgba(0,0,0,0.2)',
+          borderRight: '1px solid var(--border-muted)',
+          overflowY: 'auto',
+          padding: '1.5rem 0'
+        }}>
+          <div style={{ padding: '0 1.5rem', marginBottom: '0.8rem', fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', letterSpacing: '2px' }}>
+            COURSE CONTENTS
           </div>
           {tutorial.chapters.map((ch, idx) => (
             <button
               key={idx}
               onClick={() => setActiveChapter(idx)}
               style={{
-                padding: '0.6rem 1rem',
+                padding: '0.8rem 1.5rem',
                 textAlign: 'left',
                 background: activeChapter === idx ? 'rgba(var(--accent-rgb), 0.1)' : 'transparent',
                 border: 'none',
-                borderLeft: activeChapter === idx ? '2px solid var(--accent-color)' : '2px solid transparent',
+                borderLeft: activeChapter === idx ? `3px solid ${tutorial.color}` : '3px solid transparent',
                 color: activeChapter === idx ? 'var(--text-primary)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 width: '100%',
                 transition: 'all 0.2s',
-                fontSize: '0.8rem',
+                fontSize: '0.85rem',
                 lineHeight: '1.4'
               }}
+              onMouseEnter={(e) => {
+                if (activeChapter !== idx) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+              }}
+              onMouseLeave={(e) => {
+                if (activeChapter !== idx) e.currentTarget.style.background = 'transparent';
+              }}
             >
-              <div style={{ fontWeight: activeChapter === idx ? '700' : '400' }}>{ch.title}</div>
+              <div style={{ fontWeight: activeChapter === idx ? '700' : '400' }}>
+                {idx + 1}. {ch.title}
+              </div>
               <div style={{
-                fontSize: '0.65rem',
-                marginTop: '0.2rem',
+                fontSize: '0.7rem',
+                marginTop: '0.3rem',
                 color: LEVEL_COLORS[ch.level] || '#888',
-                fontFamily: 'var(--font-mono)'
+                fontFamily: 'var(--font-mono)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem'
               }}>
-                ● {ch.level}
+                <span style={{ 
+                  display: 'inline-block', 
+                  width: '6px', 
+                  height: '6px', 
+                  borderRadius: '50%', 
+                  background: LEVEL_COLORS[ch.level] 
+                }}></span>
+                {ch.level}
               </div>
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Content Area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
-        <div style={{ maxWidth: '900px' }}>
-          {/* Chapter Header */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-              <h2 style={{ fontSize: '1.6rem', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', margin: 0 }}>
-                {chapter.title}
-              </h2>
-              <span style={{
-                padding: '0.2rem 0.6rem',
-                borderRadius: '4px',
-                fontSize: '0.7rem',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: '700',
-                background: `${LEVEL_COLORS[chapter.level]}22`,
-                color: LEVEL_COLORS[chapter.level],
-                border: `1px solid ${LEVEL_COLORS[chapter.level]}44`
-              }}>
-                {chapter.level}
-              </span>
-            </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-              {activeCat} › {chapter.title}
-            </div>
-          </div>
-
-          {/* Explanation */}
-          <div className="metric-card" style={{ marginBottom: '1.5rem', lineHeight: '1.8', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {renderContent(chapter.content)}
-            </ul>
-          </div>
-
-          {/* Code Example */}
-          {chapter.code && (
-            <div style={{ position: 'relative' }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: 'rgba(0,0,0,0.5)',
-                padding: '0.5rem 1rem',
-                borderRadius: '8px 8px 0 0',
-                borderTop: '1px solid var(--border-muted)',
-                borderLeft: '1px solid var(--border-muted)',
-                borderRight: '1px solid var(--border-muted)'
-              }}>
-                <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-                  💻 CODE EXAMPLE — {activeCat}
+        {/* Content Area */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '2rem 3rem' }}>
+          <div style={{ maxWidth: '900px' }}>
+            {/* Chapter Header */}
+            <div style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.8rem' }}>
+                <h2 style={{ fontSize: '2rem', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', margin: 0 }}>
+                  {chapter.title}
+                </h2>
+                <span style={{
+                  padding: '0.3rem 0.8rem',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: '700',
+                  background: `${LEVEL_COLORS[chapter.level]}22`,
+                  color: LEVEL_COLORS[chapter.level],
+                  border: `1px solid ${LEVEL_COLORS[chapter.level]}44`
+                }}>
+                  {chapter.level}
                 </span>
-                <button
-                  onClick={() => copyCode(chapter.code, activeChapter)}
-                  style={{
-                    padding: '0.25rem 0.6rem',
-                    fontSize: '0.7rem',
-                    fontFamily: 'var(--font-mono)',
-                    background: copiedCode === activeChapter ? 'rgba(0,255,65,0.2)' : 'rgba(255,255,255,0.05)',
-                    border: '1px solid var(--border-muted)',
-                    borderRadius: '4px',
-                    color: copiedCode === activeChapter ? '#00ff41' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {copiedCode === activeChapter ? '✓ COPIED' : '⎘ COPY'}
-                </button>
               </div>
-              <pre style={{
-                background: 'rgba(0,0,0,0.6)',
-                border: '1px solid var(--border-muted)',
-                borderTop: 'none',
-                borderRadius: '0 0 8px 8px',
-                padding: '1.5rem',
-                margin: 0,
-                overflow: 'auto',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.82rem',
-                lineHeight: '1.6',
-                color: 'var(--accent-color)',
-                maxHeight: '450px'
-              }}>
-                {chapter.code}
-              </pre>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                {activeCat} › Chapter {activeChapter + 1}
+              </div>
             </div>
-          )}
 
-          {/* Navigation */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-muted)' }}>
-            <button
-              onClick={() => setActiveChapter(prev => Math.max(0, prev - 1))}
-              disabled={activeChapter === 0}
-              className="action-btn"
-              style={{ opacity: activeChapter === 0 ? 0.3 : 1 }}
-            >
-              ← PREV CHAPTER
-            </button>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)', alignSelf: 'center' }}>
-              {activeChapter + 1} / {tutorial.chapters.length}
-            </span>
-            <button
-              onClick={() => setActiveChapter(prev => Math.min(tutorial.chapters.length - 1, prev + 1))}
-              disabled={activeChapter === tutorial.chapters.length - 1}
-              className="action-btn"
-              style={{ opacity: activeChapter === tutorial.chapters.length - 1 ? 0.3 : 1 }}
-            >
-              NEXT CHAPTER →
-            </button>
+            {/* Explanation */}
+            <div className="metric-card" style={{ marginBottom: '2rem', lineHeight: '1.8', fontSize: '1rem', color: 'var(--text-primary)', padding: '2rem' }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {renderContent(chapter.content)}
+              </ul>
+            </div>
+
+            {/* Code Example */}
+            {chapter.code && (
+              <div style={{ position: 'relative', marginBottom: '3rem' }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'rgba(0,0,0,0.5)',
+                  padding: '0.6rem 1.2rem',
+                  borderRadius: '8px 8px 0 0',
+                  borderTop: '1px solid var(--border-muted)',
+                  borderLeft: '1px solid var(--border-muted)',
+                  borderRight: '1px solid var(--border-muted)'
+                }}>
+                  <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: tutorial.color }}>
+                    💻 {activeCat} SOURCE CODE
+                  </span>
+                  <button
+                    onClick={() => copyCode(chapter.code, activeChapter)}
+                    style={{
+                      padding: '0.3rem 0.8rem',
+                      fontSize: '0.75rem',
+                      fontFamily: 'var(--font-mono)',
+                      background: copiedCode === activeChapter ? 'rgba(0,255,65,0.2)' : 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--border-muted)',
+                      borderRadius: '4px',
+                      color: copiedCode === activeChapter ? '#00ff41' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {copiedCode === activeChapter ? '✓ COPIED' : '⎘ COPY CODE'}
+                  </button>
+                </div>
+                <pre style={{
+                  background: 'rgba(0,0,0,0.6)',
+                  border: '1px solid var(--border-muted)',
+                  borderTop: 'none',
+                  borderRadius: '0 0 8px 8px',
+                  padding: '2rem',
+                  margin: 0,
+                  overflow: 'auto',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.9rem',
+                  lineHeight: '1.6',
+                  color: 'var(--accent-color)',
+                  maxHeight: '500px'
+                }}>
+                  {chapter.code}
+                </pre>
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '1.5rem', borderTop: '1px solid var(--border-muted)', marginBottom: '2rem' }}>
+              <button
+                onClick={() => setActiveChapter(prev => Math.max(0, prev - 1))}
+                disabled={activeChapter === 0}
+                className="action-btn"
+                style={{ 
+                  opacity: activeChapter === 0 ? 0.3 : 1,
+                  padding: '0.8rem 1.5rem'
+                }}
+              >
+                ← PREVIOUS CHAPTER
+              </button>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: 'var(--text-secondary)', alignSelf: 'center' }}>
+                {activeChapter + 1} OF {tutorial.chapters.length}
+              </span>
+              <button
+                onClick={() => setActiveChapter(prev => Math.min(tutorial.chapters.length - 1, prev + 1))}
+                disabled={activeChapter === tutorial.chapters.length - 1}
+                className="action-btn"
+                style={{ 
+                  opacity: activeChapter === tutorial.chapters.length - 1 ? 0.3 : 1,
+                  padding: '0.8rem 1.5rem',
+                  background: `rgba(${parseInt(tutorial.color.slice(1,3),16)},${parseInt(tutorial.color.slice(3,5),16)},${parseInt(tutorial.color.slice(5,7),16)}, 0.2)`,
+                  borderColor: tutorial.color,
+                  color: tutorial.color
+                }}
+              >
+                NEXT CHAPTER →
+              </button>
+            </div>
           </div>
         </div>
       </div>
