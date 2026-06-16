@@ -51,7 +51,7 @@ export const Sidebar = ({ activeTab, setActiveTab, handleResetAllProgress, user 
   useEffect(() => {
     const checkSystemHealth = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/health');
+        const res = await fetch('/api/health');
         if (res.ok) {
           const data = await res.json();
           setSystemOnline(data.status === 'HEALTHY');

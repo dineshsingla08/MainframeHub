@@ -27,7 +27,7 @@ export const ChangePasswordModal = ({ onClose }) => {
     const token = localStorage.getItem('mf_auth_token');
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/change-password', {
+      const res = await fetch('/api/auth/change-password', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

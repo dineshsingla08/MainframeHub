@@ -2,12 +2,32 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-const dbPath = path.resolve(__dirname, 'mainframehub.db');
+let dbPath = path.resolve(__dirname, 'mainframehub.db');
 
-// Ensure db directory exists
-const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+// If running on Vercel, copy the template database to writable /tmp directory
+if (process.env.VERCEL) {
+  const tmpPath = path.join('/tmp', 'mainframehub.db');
+  try {
+    if (!fs.existsSync(tmpPath)) {
+      if (fs.existsSync(dbPath)) {
+        fs.copyFileSync(dbPath, tmpPath);
+        console.log('Template database successfully copied to /tmp');
+      } else {
+        console.log('No template database file found to copy, initializing a new one in /tmp');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to copy database to /tmp:', err.message);
+  }
+  dbPath = tmpPath;
+}
+
+// Ensure db directory exists (only for non-Vercel local paths)
+if (!process.env.VERCEL) {
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
 }
 
 const db = new sqlite3.Database(dbPath, (err) => {

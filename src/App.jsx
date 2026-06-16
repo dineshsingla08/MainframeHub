@@ -107,7 +107,7 @@ export default function App() {
     useEffect(() => {
         const recordVisit = async () => {
             try {
-                await fetch('http://localhost:5000/api/analytics/hit', {
+                await fetch('/api/analytics/hit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: user ? user.username : 'Guest' })
@@ -122,7 +122,7 @@ export default function App() {
 
     const fetchProgress = async (authToken) => {
         try {
-            const res = await fetch('http://localhost:5000/api/progress', {
+            const res = await fetch('/api/progress', {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
             if (res.ok) {
@@ -139,7 +139,7 @@ export default function App() {
     const syncProgress = async (m, nr, s) => {
         if (!token) return;
         try {
-            await fetch('http://localhost:5000/api/progress', {
+            await fetch('/api/progress', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -352,7 +352,7 @@ export default function App() {
                 }).join('\n');
 
                 try {
-                    await fetch('http://localhost:5000/api/progress/send-exam-report', {
+                    await fetch('/api/progress/send-exam-report', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

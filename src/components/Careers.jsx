@@ -20,7 +20,7 @@ export const Careers = ({ user }) => {
       if (filterType !== 'ALL') queryParams.append('type', filterType);
       if (filterExp !== 'ALL') queryParams.append('experience', filterExp);
 
-      const res = await fetch(`http://localhost:5000/api/jobs?${queryParams.toString()}`);
+      const res = await fetch(`/api/jobs?${queryParams.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch job postings.');
       const data = await res.json();
       setJobs(data);

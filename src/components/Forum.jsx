@@ -24,7 +24,7 @@ export const Forum = ({ user, token, triggerAuthModal }) => {
   const fetchTopics = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/forum/topics');
+      const res = await fetch('/api/forum/topics');
       if (!res.ok) throw new Error('Failed to fetch topics');
       const data = await res.json();
       setTopics(data);
@@ -40,7 +40,7 @@ export const Forum = ({ user, token, triggerAuthModal }) => {
     if (!token) return;
 
     try {
-      const res = await fetch('http://localhost:5000/api/forum/topics', {
+      const res = await fetch('/api/forum/topics', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ export const Forum = ({ user, token, triggerAuthModal }) => {
   const handleSelectTopic = async (topic) => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/forum/topics/${topic.id}`);
+      const res = await fetch(`/api/forum/topics/${topic.id}`);
       if (!res.ok) throw new Error('Failed to fetch topic details');
       const data = await res.json();
       setSelectedTopic(data.topic);
@@ -83,7 +83,7 @@ export const Forum = ({ user, token, triggerAuthModal }) => {
 
     setSubmittingReply(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/forum/topics/${selectedTopic.id}/replies`, {
+      const res = await fetch(`/api/forum/topics/${selectedTopic.id}/replies`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ export const Forum = ({ user, token, triggerAuthModal }) => {
   const handleLike = async (topicId, e) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`http://localhost:5000/api/forum/topics/${topicId}/like`, {
+      const res = await fetch(`/api/forum/topics/${topicId}/like`, {
         method: 'POST'
       });
       if (res.ok) {
