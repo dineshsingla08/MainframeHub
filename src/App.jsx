@@ -103,6 +103,23 @@ export default function App() {
         }
     }, [token]);
 
+    // Track site visits reactively
+    useEffect(() => {
+        const recordVisit = async () => {
+            try {
+                await fetch('http://localhost:5000/api/analytics/hit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user ? user.username : 'Guest' })
+                });
+            } catch (err) {
+                console.error('Error recording analytics hit:', err);
+            }
+        };
+        recordVisit();
+    }, [user?.username]);
+
+
     const fetchProgress = async (authToken) => {
         try {
             const res = await fetch('http://localhost:5000/api/progress', {

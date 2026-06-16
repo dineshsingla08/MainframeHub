@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const progressRoutes = require('./routes/progress');
 const forumRoutes = require('./routes/forum');
 const jobsRoutes = require('./routes/jobs');
+const analyticsRoutes = require('./routes/analytics');
 const { testSmtpConnection, isSmtpConfigured } = require('./utils/mailer');
 
 const app = express();
@@ -21,6 +22,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/forum', forumRoutes);
 app.use('/api/jobs', jobsRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Simple healthcheck
 app.get('/api/health', (req, res) => {

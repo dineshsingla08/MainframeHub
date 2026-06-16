@@ -388,6 +388,17 @@ function initializeDatabase() {
       }
     });
 
+    // 6. Site Visits Table (Visitor tracking)
+    db.run(`
+      CREATE TABLE IF NOT EXISTS site_visits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ip_address TEXT,
+        user_agent TEXT,
+        username TEXT DEFAULT 'Guest',
+        visited_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Database tables successfully initialized.');
   });
 }
