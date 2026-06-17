@@ -75,6 +75,10 @@
     --glow-accent: 0 0 15px rgba(0, 240, 255, 0.35);
 }
 
+html {
+    zoom: 0.8;
+}
+
 body {
     font-family: var(--font-main);
     background-color: var(--bg-base);
@@ -83,7 +87,6 @@ body {
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    zoom: 0.8;
 }
 
 /* Custom Scrollbars */
