@@ -77,7 +77,7 @@ export const AuthModal = ({ onClose, onLoginSuccess }) => {
 
   // Load Google Identity Services script
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) return;
+    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your_google_client_id_here.apps.googleusercontent.com') return;
     const scriptId = 'google-gsi';
     if (document.getElementById(scriptId)) {
       if (window.google) setGoogleReady(true);
@@ -210,7 +210,9 @@ export const AuthModal = ({ onClose, onLoginSuccess }) => {
     otp: 'VERIFY CODE', reset: 'RESET PASSWORD'
   };
 
-  const showGoogleBtn = ['login', 'register'].includes(mode) && GOOGLE_CLIENT_ID;
+  const showGoogleBtn = ['login', 'register'].includes(mode) && 
+                        GOOGLE_CLIENT_ID && 
+                        GOOGLE_CLIENT_ID !== 'your_google_client_id_here.apps.googleusercontent.com';
 
   return (
     <div style={{
