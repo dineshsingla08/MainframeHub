@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: mainframe-hub-backend
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node server.js
+    disk:
+      name: mainframe-db
+      mountPath: db
+      sizeGB: 1
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+        placeholder: "Enter a secure JWT secret token"
+      - key: SMTP_USER
+        sync: false
+        placeholder: "Enter your SMTP email address (e.g. dineshsingla08@gmail.com)"
+      - key: SMTP_PASS
+        sync: false
+        placeholder: "Enter your 16-character Gmail App Password"
