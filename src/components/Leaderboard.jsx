@@ -10,7 +10,7 @@ export const Leaderboard = ({ user }) => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/progress/leaderboard');
+      const res = await fetch((window.API_BASE || '') + '/api/progress/leaderboard');
       if (!res.ok) throw new Error('Failed to fetch leaderboard data.');
       const data = await res.json();
       setRankings(data);

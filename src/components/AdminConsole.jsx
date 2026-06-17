@@ -15,7 +15,7 @@ export const AdminConsole = () => {
 
     try {
       // Fetch users
-      const usersRes = await fetch('/api/auth/users', {
+      const usersRes = await fetch((window.API_BASE || '') + '/api/auth/users', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -27,7 +27,7 @@ export const AdminConsole = () => {
       setUsers(usersData);
 
       // Fetch stats
-      const statsRes = await fetch('/api/analytics/stats', {
+      const statsRes = await fetch((window.API_BASE || '') + '/api/analytics/stats', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -54,7 +54,7 @@ export const AdminConsole = () => {
       const token = localStorage.getItem('mf_auth_token');
 
       try {
-        const res = await fetch(`/api/auth/users/${id}`, {
+        const res = await fetch((window.API_BASE || '') + `/api/auth/users/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`
