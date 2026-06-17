@@ -75,6 +75,12 @@
     --glow-accent: 0 0 15px rgba(0, 240, 255, 0.35);
 }
 
+html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
 html {
     zoom: 0.8;
 }
@@ -83,7 +89,6 @@ body {
     font-family: var(--font-main);
     background-color: var(--bg-base);
     color: var(--text-light);
-    min-height: 100vh;
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
@@ -123,7 +128,7 @@ body {
 .app-container {
     display: grid;
     grid-template-columns: 280px 1fr;
-    height: 100vh;          /* Hard clamp — prevents grid row from stretching past viewport */
+    height: 100%;          /* Changed from 100vh to 100% to fill zoomed document root */
     overflow: hidden;       /* Children manage their own scroll */
 }
 
