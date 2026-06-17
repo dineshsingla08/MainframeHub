@@ -6,10 +6,6 @@ services:
     rootDir: server
     buildCommand: npm install
     startCommand: node server.js
-    disk:
-      name: mainframe-db
-      mountPath: db
-      sizeGB: 1
     envVars:
       - key: JWT_SECRET
         sync: false
